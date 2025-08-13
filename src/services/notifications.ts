@@ -1,9 +1,27 @@
 import PushNotification, { Importance } from 'react-native-push-notification';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
+import Sound from 'react-native-sound';
 import { PrayerTimes, NotificationSettings } from '../types';
 
+interface EzanSettings {
+  enabled: boolean;
+  volume: number;
+  ezanType: 'builtin' | 'traditional' | 'modern';
+  vibration: boolean;
+}
+
 export class NotificationService {
+  private static ezanSound: Sound | null = null;
+  private static ezanSettings: EzanSettings = {
+    enabled: false,
+    volume: 0.8,
+    ezanType: 'traditional',
+    vibration: true,
+  };
+
   static initialize() {
+    // Initialize sound system
+    Sound.setCategory('Playback');
     PushNotification.configure({
       onRegister: function (token) {
         console.log('TOKEN:', token);
@@ -27,8 +45,9 @@ export class NotificationService {
       requestPermissions: Platform.OS === 'ios',
     });
 
-    // Create notification channel for Android
+    // Create notification channels for Android
     if (Platform.OS === 'android') {
+      // Prayer notification channel
       PushNotification.createChannel(
         {
           channelId: 'prayer-times',
@@ -39,7 +58,21 @@ export class NotificationService {
           importance: Importance.HIGH,
           vibrate: true,
         },
-        (created) => console.log(`Channel created: ${created}`)
+        (created) => console.log(`Prayer channel created: ${created}`)
+      );
+
+      // Ezan channel
+      PushNotification.createChannel(
+        {
+          channelId: 'ezan-call',
+          channelName: 'Ezan',
+          channelDescription: 'Ezan sesi ile namaz vakti bildirimleri',
+          playSound: true,
+          soundName: 'ezan_traditional.mp3',
+          importance: Importance.MAX,
+          vibrate: true,
+        },
+        (created) => console.log(`Ezan channel created: ${created}`)
       );
     }
   }
@@ -53,6 +86,92 @@ export class NotificationService {
         .catch(() => {
           resolve(false);
         });
+    });
+  }
+
+  static setEzanSettings(settings: EzanSettings) {
+    this.ezanSettings = { ...settings };
+  }
+
+  static getEzanSettings(): EzanSettings {
+    return { ...this.ezanSettings };
+  }
+
+  static playEzan(prayerName: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.ezanSettings.enabled) {
+        resolve();
+        return;
+      }
+
+      try {
+        // Stop any currently playing ezan
+        this.stopEzan();
+
+        const ezanFile = this.getEzanFile();
+        this.ezanSound = new Sound(ezanFile, Sound.MAIN_BUNDLE, (error) => {
+          if (error) {
+            console.error('Failed to load ezan sound', error);
+            reject(error);
+            return;
+          }
+
+          if (this.ezanSound) {
+            this.ezanSound.setVolume(this.ezanSettings.volume);
+            this.ezanSound.play((success) => {
+              if (success) {
+                console.log('Ezan played successfully');
+              } else {
+                console.error('Ezan playback failed');
+              }
+              resolve();
+            });
+          }
+        });
+
+        // Show ezan notification
+        this.showEzanNotification(prayerName);
+
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  static stopEzan() {
+    if (this.ezanSound) {
+      this.ezanSound.stop();
+      this.ezanSound.release();
+      this.ezanSound = null;
+    }
+  }
+
+  private static getEzanFile(): string {
+    switch (this.ezanSettings.ezanType) {
+      case 'traditional':
+        return 'ezan_traditional.mp3';
+      case 'modern':
+        return 'ezan_modern.mp3';
+      default:
+        return 'ezan_builtin.mp3';
+    }
+  }
+
+  private static showEzanNotification(prayerName: string) {
+    const displayName = this.getPrayerDisplayName(prayerName);
+    
+    PushNotification.localNotification({
+      title: '🕌 Ezan',
+      message: `${displayName} vakti girdi - Ezan okunuyor`,
+      channelId: 'ezan-call',
+      soundName: 'default',
+      playSound: false, // We're playing our own sound
+      vibrate: this.ezanSettings.vibration,
+      priority: 'max',
+      importance: 'max',
+      ongoing: true,
+      actions: ['Durdur'],
+      invokeApp: true,
     });
   }
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="120dp"
+    android:minResizeHeight="40dp"
+    android:maxResizeWidth="300dp"
+    android:maxResizeHeight="80dp"
+    android:updatePeriodMillis="900000"
+    android:widgetCategory="home_screen|keyguard"
+    android:resizeMode="horizontal|vertical"
+    android:initialLayout="@layout/prayer_widget_compact"
+    android:previewImage="@mipmap/ic_launcher"
+    android:description="@string/prayer_widget_compact_description"
+    android:initialKeyguardLayout="@layout/prayer_widget_compact" />

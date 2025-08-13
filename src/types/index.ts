@@ -80,6 +80,7 @@ export type RootStackParamList = {
 };
 
 export type TabParamList = {
+  Home: undefined;
   PrayerTimes: undefined;
   QiblaFinder: undefined;
   Search: undefined;

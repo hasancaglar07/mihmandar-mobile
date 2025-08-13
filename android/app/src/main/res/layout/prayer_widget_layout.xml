@@ -1,30 +1,187 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="12dp"
-    android:background="@android:color/white">
+    android:orientation="vertical"
+    android:padding="18dp"
+    android:background="@drawable/widget_background"
+    android:elevation="4dp">
 
-    <TextView
-        android:id="@+id/tvNext"
-        android:layout_width="wrap_content"
+    <!-- Header with App Icon and Title -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Sıradaki: --"
-        android:textStyle="bold"
-        android:textColor="#177267"
-        android:textSize="14sp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
-    <TextView
-        android:id="@+id/tvTime"
-        android:layout_width="wrap_content"
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@mipmap/ic_launcher"
+            android:layout_marginEnd="8dp"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Mihmandar"
+            android:textColor="#177267"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvLastUpdate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="●"
+            android:textColor="#10b981"
+            android:textSize="8sp"/>
+
+    </LinearLayout>
+
+    <!-- Main Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <!-- Next Prayer Highlight -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/next_prayer_background"
+            android:padding="8dp"
+            android:layout_marginBottom="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvPrayerIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🕌"
+                android:textSize="18sp"
+                android:layout_marginEnd="8dp"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNext"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sıradaki: Öğle"
+                    android:textColor="#ffffff"
+                    android:textSize="12sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tvTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="12:45"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace"/>
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvRemaining"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⏱ 23 dk"
+                android:textColor="#ffffff"
+                android:textSize="10sp"
+                android:alpha="0.9"/>
+
+        </LinearLayout>
+
+        <!-- Quick Prayer Times Grid -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <!-- Left Column -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginEnd="4dp">
+
+                <include layout="@layout/prayer_time_mini"
+                    android:id="@+id/imsakMini"/>
+
+                <include layout="@layout/prayer_time_mini"
+                    android:id="@+id/ogleMini"/>
+
+                <include layout="@layout/prayer_time_mini"
+                    android:id="@+id/aksamMini"/>
+
+            </LinearLayout>
+
+            <!-- Right Column -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="4dp">
+
+                <include layout="@layout/prayer_time_mini"
+                    android:id="@+id/gunesMini"/>
+
+                <include layout="@layout/prayer_time_mini"
+                    android:id="@+id/ikindiMini"/>
+
+                <include layout="@layout/prayer_time_mini"
+                    android:id="@+id/yatsiMini"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Footer with Hijri Date -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/tvNext"
-        android:layout_marginTop="4dp"
-        android:text="19:59 (≈ 40 dk)"
-        android:textColor="#111827"
-        android:textSize="13sp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-</RelativeLayout>
+        <TextView
+            android:id="@+id/tvHijriDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🌙 15 Rabiulevvel 1446"
+            android:textColor="#f59e0b"
+            android:textSize="9sp"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <TextView
+            android:id="@+id/tvLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📍"
+            android:textColor="#6b7280"
+            android:textSize="9sp"/>
+
+    </LinearLayout>
+
+</LinearLayout>
 
 
 

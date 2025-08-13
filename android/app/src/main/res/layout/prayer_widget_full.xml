@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Full Widget - All Prayer Times -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_background_full">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@mipmap/ic_launcher"
+            android:layout_marginEnd="8dp"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Namaz Vakitleri"
+            android:textColor="#177267"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvDateFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="15 Aralık"
+            android:textColor="#6b7280"
+            android:textSize="10sp"/>
+
+    </LinearLayout>
+
+    <!-- Next Prayer Highlight -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/next_prayer_background"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvNextIconFull"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="☀️"
+            android:textSize="16sp"
+            android:layout_marginEnd="8dp"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvNextNameFull"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sıradaki: Öğle"
+                android:textColor="#ffffff"
+                android:textSize="11sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tvNextTimeFull"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="12:45 (23 dk)"
+                android:textColor="#ffffff"
+                android:textSize="12sp"
+                android:fontFamily="monospace"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- All Prayer Times Grid -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- Row 1: İmsak, Güneş, Öğle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:layout_marginBottom="4dp">
+
+            <include layout="@layout/prayer_time_item"
+                android:id="@+id/imsakItem"/>
+
+            <include layout="@layout/prayer_time_item"
+                android:id="@+id/gunesItem"/>
+
+            <include layout="@layout/prayer_time_item"
+                android:id="@+id/ogleItem"/>
+
+        </LinearLayout>
+
+        <!-- Row 2: İkindi, Akşam, Yatsı -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <include layout="@layout/prayer_time_item"
+                android:id="@+id/ikindiItem"/>
+
+            <include layout="@layout/prayer_time_item"
+                android:id="@+id/aksamItem"/>
+
+            <include layout="@layout/prayer_time_item"
+                android:id="@+id/yatsiItem"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Footer -->
+    <TextView
+        android:id="@+id/tvHijriDateFull"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🌙 15 Rabiulevvel 1446"
+        android:textColor="#f59e0b"
+        android:textSize="9sp"
+        android:gravity="center"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Individual Prayer Time Item for Full Widget -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/prayer_item_background"
+    android:layout_margin="2dp"
+    android:padding="4dp">
+
+    <TextView
+        android:id="@+id/tvPrayerName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="İmsak"
+        android:textColor="#6b7280"
+        android:textSize="8sp"
+        android:textStyle="bold"/>
+
+    <TextView
+        android:id="@+id/tvPrayerTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="05:30"
+        android:textColor="#1f2937"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:layout_marginTop="2dp"/>
+
+</LinearLayout>

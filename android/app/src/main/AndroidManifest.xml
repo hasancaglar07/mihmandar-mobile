@@ -35,17 +35,41 @@
         android:label="Web İçerik"
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"/>
 
-      <!-- App Widget Receiver -->
+      <!-- App Widget Receivers -->
       <receiver
         android:name=".widget.PrayerWidgetProvider"
         android:exported="false"
-        android:label="Namaz Vakti">
+        android:label="Namaz Vakti - Standart">
         <intent-filter>
           <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
         </intent-filter>
         <meta-data
           android:name="android.appwidget.provider"
           android:resource="@xml/prayer_widget_info" />
+      </receiver>
+
+      <receiver
+        android:name=".widget.PrayerWidgetCompactProvider"
+        android:exported="false"
+        android:label="Namaz Vakti - Kompakt">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/prayer_widget_compact_info" />
+      </receiver>
+
+      <receiver
+        android:name=".widget.PrayerWidgetFullProvider"
+        android:exported="false"
+        android:label="Namaz Vakti - Tam">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/prayer_widget_full_info" />
       </receiver>
       <receiver android:name=".widget.PrayerWidgetBootReceiver" android:exported="false">
         <intent-filter>

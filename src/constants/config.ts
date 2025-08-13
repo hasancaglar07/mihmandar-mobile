@@ -7,7 +7,7 @@ export const API_BASE_URL = Platform.select({
 });
 // Geliştirme: lokal Next.js; Yayın: canlı site
 // Geliştirme: lokal Next.js; Yayın: canlı site
-export const WEB_BASE_URL = __DEV__ ? 'https://mihmandar.org' : 'https://mihmandar.org';
+export const WEB_BASE_URL = __DEV__ ? 'http://10.0.2.2:3002' : 'https://mihmandar.org';
 
 export const ENDPOINTS = {
   cities: `${API_BASE_URL}/cities`,

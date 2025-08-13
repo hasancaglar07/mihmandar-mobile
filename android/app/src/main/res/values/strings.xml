@@ -1,3 +1,14 @@
 <resources>
-    <string name="app_name">MihmandarMobile</string>
+    <string name="app_name">Mihmandar</string>
+    <string name="prayer_widget_description">Namaz vakitleri ve bir sonraki namaza kalan süreyi gösterir</string>
+    <string name="prayer_widget_compact_description">Kompakt namaz vakti widget\'ı - Sadece sıradaki namaz</string>
+    <string name="prayer_widget_full_description">Tam namaz vakitleri widget\'ı - Tüm vakitler ve Hijri takvim</string>
+    <string name="widget_loading">Yükleniyor...</string>
+    <string name="widget_error">Hata</string>
+    <string name="widget_no_location">Konum bulunamadı</string>
+    <string name="widget_next_prayer">Sıradaki Namaz</string>
+    <string name="widget_time_remaining">Kalan Süre</string>
+    <string name="widget_type_compact">Kompakt Widget</string>
+    <string name="widget_type_standard">Standart Widget</string>
+    <string name="widget_type_full">Tam Widget</string>
 </resources>

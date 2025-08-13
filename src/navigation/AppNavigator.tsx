@@ -7,6 +7,7 @@ import { TabParamList, RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
 
 // Screens
+import HomeScreen from '../screens/HomeScreen';
 import PrayerTimesScreen from '../screens/PrayerTimesScreen';
 import QiblaFinderScreen from '../screens/QiblaFinderScreen';
 import SearchScreen from '../screens/SearchScreen';
@@ -24,6 +25,9 @@ function TabNavigator() {
           let iconName: string;
 
           switch (route.name) {
+            case 'Home':
+              iconName = 'home';
+              break;
             case 'PrayerTimes':
               iconName = 'access-time';
               break;
@@ -67,6 +71,14 @@ function TabNavigator() {
         },
       })}
     >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          title: 'Ana Sayfa',
+          tabBarLabel: 'Ana Sayfa',
+        }}
+      />
       <Tab.Screen
         name="PrayerTimes"
         component={PrayerTimesScreen}

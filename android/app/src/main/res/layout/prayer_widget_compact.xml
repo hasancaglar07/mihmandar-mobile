@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Compact Widget - Only Next Prayer -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="@drawable/widget_background_compact">
+
+    <!-- Prayer Icon -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginEnd="12dp">
+
+        <TextView
+            android:id="@+id/tvPrayerIconCompact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🕌"
+            android:textSize="28sp"/>
+
+    </LinearLayout>
+
+    <!-- Prayer Info -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvNextCompact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sıradaki: Öğle"
+            android:textColor="#177267"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvTimeCompact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="12:45"
+            android:textColor="#1f2937"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:layout_marginTop="2dp"/>
+
+        <TextView
+            android:id="@+id/tvRemainingCompact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="23 dk"
+            android:textColor="#6b7280"
+            android:textSize="10sp"
+            android:layout_marginTop="1dp"/>
+
+    </LinearLayout>
+
+    <!-- Status Indicator -->
+    <TextView
+        android:id="@+id/tvStatusCompact"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="●"
+        android:textColor="#10b981"
+        android:textSize="8sp"
+        android:layout_gravity="top|end"/>
+
+</LinearLayout>

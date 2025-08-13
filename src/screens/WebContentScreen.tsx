@@ -1,7 +1,9 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Platform } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Platform, NativeSyntheticEvent } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { WEB_BASE_URL } from '../constants/config';
+import { persistCoordinatesForWidget } from '../services/location';
+import { WidgetService } from '../services/widget';
 
 type Props = { path?: string; title?: string };
 
@@ -21,10 +23,77 @@ export default function WebContentScreen({ path = '/', title = 'İçerik' }: Pro
         if(!meta){meta=document.createElement('meta');meta.name='viewport';document.head.appendChild(meta)}
         meta.setAttribute('content','width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
         document.documentElement.style.scrollBehavior='smooth';
+
+        // Expose a light bridge for the web app
+        window.MihmandarBridge = {
+          setLocation: function(lat, lng){
+            try{ window.ReactNativeWebView.postMessage(JSON.stringify({ type:'widget:setLocation', lat: Number(lat), lng: Number(lng) })); }catch(e){}
+          },
+          updateWidget: function(data){
+            try{ window.ReactNativeWebView.postMessage(JSON.stringify({ type:'widget:update', payload: data })); }catch(e){}
+          },
+          setEzanSettings: function(settings){
+            try{ window.ReactNativeWebView.postMessage(JSON.stringify({ type:'ezan:set', payload: settings })); }catch(e){}
+          },
+          setNotificationSettings: function(settings){
+            try{ window.ReactNativeWebView.postMessage(JSON.stringify({ type:'notify:set', payload: settings })); }catch(e){}
+          },
+          setWidgetTheme: function(theme){
+            try{ window.ReactNativeWebView.postMessage(JSON.stringify({ type:'widget:theme', payload: theme })); }catch(e){}
+          }
+        };
+
+        // Auto-send geolocation to RN if available (best-effort)
+        if (navigator && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(function(pos){
+            try{
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'widget:setLocation',
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+              }));
+            }catch(e){}
+          }, function(){}, { enableHighAccuracy:true, timeout:10000, maximumAge:60000 });
+        }
       }catch(e){}
       true;
     })();
   `;
+
+  const handleMessage = async (event: any) => {
+    try {
+      const data = event?.nativeEvent?.data;
+      if (!data) return;
+      const msg = JSON.parse(data);
+      switch (msg.type) {
+        case 'widget:setLocation':
+          if (msg.lat && msg.lng) {
+            console.log('🌍 WebView -> RN location:', msg.lat, msg.lng);
+            await persistCoordinatesForWidget(msg.lat, msg.lng);
+          }
+          break;
+        case 'widget:update':
+          if (msg.payload) {
+            // Attempt to refresh widget using current app-side location + payload if available
+            try { await WidgetService.refreshWidget(); } catch {}
+          }
+          break;
+        case 'widget:theme':
+          try { await WidgetService.applyTheme(msg.payload); } catch {}
+          break;
+        case 'ezan:set':
+          // Optional: forward to NotificationService if needed
+          break;
+        case 'notify:set':
+          // Optional: forward to NotificationService if needed
+          break;
+        default:
+          break;
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -47,9 +116,11 @@ export default function WebContentScreen({ path = '/', title = 'İçerik' }: Pro
         onNavigationStateChange={(s)=>{ setCanGoBack(s.canGoBack); setCanGoForward(s.canGoForward); }}
         onError={()=>{ setError('Sayfa yüklenemedi'); setLoading(false); }}
         injectedJavaScript={injectedJS}
+        onMessage={handleMessage}
         javaScriptEnabled
         domStorageEnabled
         sharedCookiesEnabled
+        geolocationEnabled
         decelerationRate={Platform.OS==='ios'?'normal':'fast'}
         originWhitelist={["*"]}
         setSupportMultipleWindows={false}

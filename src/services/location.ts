@@ -118,8 +118,14 @@ const { LocationPrefs } = NativeModules as { LocationPrefs?: NativeLocationPrefs
 
 export const persistCoordinatesForWidget = async (lat: number, lng: number) => {
   try {
+    console.log('📍 LOCATION PERSIST: Konum kaydediliyor:', { lat, lng });
     if (LocationPrefs && typeof LocationPrefs.saveCoordinates === 'function') {
-      await LocationPrefs.saveCoordinates(lat, lng);
+      const result = await LocationPrefs.saveCoordinates(lat, lng);
+      console.log('✅ LOCATION PERSIST: Native module başarılı:', result);
+    } else {
+      console.error('❌ LOCATION PERSIST: LocationPrefs native module bulunamadı!');
     }
-  } catch {}
+  } catch (error) {
+    console.error('❌ LOCATION PERSIST: Hata:', error);
+  }
 };
