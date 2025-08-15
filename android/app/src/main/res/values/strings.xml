@@ -11,4 +11,5 @@
     <string name="widget_type_compact">Kompakt Widget</string>
     <string name="widget_type_standard">Standart Widget</string>
     <string name="widget_type_full">Tam Widget</string>
+    <string name="widget_description">Namaz vakitleri widget\u0131 - Sıradaki namaz ve kalan süre</string>
 </resources>

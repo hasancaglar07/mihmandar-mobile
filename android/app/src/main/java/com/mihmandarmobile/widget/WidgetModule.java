@@ -81,6 +81,16 @@ public class WidgetModule extends ReactContextBaseJavaModule {
             
             // Trigger widget update
             forceWidgetUpdate(context);
+            // Update all providers too
+            AppWidgetManager am = AppWidgetManager.getInstance(context);
+            Intent i2 = new Intent(context, PrayerWidgetCompactProvider.class);
+            i2.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            int[] ids2 = am.getAppWidgetIds(new ComponentName(context, PrayerWidgetCompactProvider.class));
+            if (ids2.length > 0) { i2.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids2); context.sendBroadcast(i2); }
+            Intent i3 = new Intent(context, PrayerWidgetFullProvider.class);
+            i3.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            int[] ids3 = am.getAppWidgetIds(new ComponentName(context, PrayerWidgetFullProvider.class));
+            if (ids3.length > 0) { i3.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids3); context.sendBroadcast(i3); }
             
             promise.resolve(true);
         } catch (Exception e) {
@@ -96,6 +106,32 @@ public class WidgetModule extends ReactContextBaseJavaModule {
             promise.resolve(true);
         } catch (Exception e) {
             promise.reject("FORCE_REFRESH_ERROR", e.getMessage());
+        }
+    }
+
+    @ReactMethod
+    public void forceRefreshAll(Promise promise) {
+        try {
+            Context context = getReactApplicationContext();
+            AppWidgetManager am = AppWidgetManager.getInstance(context);
+            // Standard
+            Intent i1 = new Intent(context, PrayerWidgetProvider.class);
+            i1.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            int[] ids1 = am.getAppWidgetIds(new ComponentName(context, PrayerWidgetProvider.class));
+            if (ids1.length > 0) { i1.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids1); context.sendBroadcast(i1); }
+            // Compact
+            Intent i2 = new Intent(context, PrayerWidgetCompactProvider.class);
+            i2.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            int[] ids2 = am.getAppWidgetIds(new ComponentName(context, PrayerWidgetCompactProvider.class));
+            if (ids2.length > 0) { i2.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids2); context.sendBroadcast(i2); }
+            // Full
+            Intent i3 = new Intent(context, PrayerWidgetFullProvider.class);
+            i3.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            int[] ids3 = am.getAppWidgetIds(new ComponentName(context, PrayerWidgetFullProvider.class));
+            if (ids3.length > 0) { i3.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids3); context.sendBroadcast(i3); }
+            promise.resolve(true);
+        } catch (Exception e) {
+            promise.reject("FORCE_REFRESH_ALL_ERROR", e.getMessage());
         }
     }
 

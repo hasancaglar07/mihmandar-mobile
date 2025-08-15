@@ -49,13 +49,24 @@ struct Provider: IntentTimelineProvider {
             entries.append(entry)
         }
 
-        let timeline = Timeline(entries: entries, policy: .atEnd)
+        let nextUpdate = Calendar.current.date(byAdding: .second, value: min(60, remainingSeconds), to: currentDate)!
+        TimelineEntry(date: .now, policy: .after(nextUpdate))
         completion(timeline)
     }
     
     private func fetchPrayerTimes(for date: Date) -> SimpleEntry {
-        // This would normally fetch from your API
-        // For now, return placeholder data
+        // Try to get cached data first
+        if let cachedEntry = getCachedPrayerTimes() {
+            return cachedEntry
+        }
+        
+        // Fetch from API asynchronously
+        fetchPrayerTimesFromAPI { entry in
+            // Cache the result
+            self.cachePrayerTimes(entry)
+        }
+        
+        // Return placeholder data while loading
         let hijriFormatter = DateFormatter()
         hijriFormatter.calendar = Calendar(identifier: .islamicUmmAlQura)
         hijriFormatter.dateStyle = .long
@@ -63,17 +74,191 @@ struct Provider: IntentTimelineProvider {
         
         return SimpleEntry(
             date: date,
-            nextPrayer: "Öğle",
-            nextTime: "12:45",
-            remainingMinutes: 120,
-            hijriDate: "15 Rabiulevvel 1446",
+            nextPrayer: "Yükleniyor...",
+            nextTime: "--:--",
+            remainingMinutes: 0,
+            hijriDate: hijriFormatter.string(from: date),
             allPrayerTimes: [
-                "İmsak": "05:30",
-                "Güneş": "07:15",
-                "Öğle": "12:45",
-                "İkindi": "15:30",
-                "Akşam": "18:15",
-                "Yatsı": "19:45"
+                "İmsak": "--:--",
+                "Güneş": "--:--",
+                "Öğle": "--:--",
+                "İkindi": "--:--",
+                "Akşam": "--:--",
+                "Yatsı": "--:--"
+            ]
+        )
+    }
+    
+    private func fetchPrayerTimesFromAPI(completion: @escaping (SimpleEntry) -> Void) {
+        // Get stored coordinates from UserDefaults (shared with main app)
+        let userDefaults = UserDefaults(suiteName: "group.com.mihmandarmobile.widget")
+        guard let lat = userDefaults?.double(forKey: "latitude"),
+              let lng = userDefaults?.double(forKey: "longitude"),
+              lat != 0, lng != 0 else {
+            return
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let today = dateFormatter.string(from: Date())
+        
+        // Calculate timezone offset (matching Android implementation)
+        let timeZone = TimeZone.current
+        let offsetInMinutes = -(timeZone.secondsFromGMT() / 60)
+        
+        let urlString = "https://vakit.vercel.app/api/timesForGPS?lat=\(lat)&lng=\(lng)&date=\(today)&days=1&timezoneOffset=\(offsetInMinutes)&calculationMethod=Turkey&lang=tr"
+        
+        guard let url = URL(string: urlString) else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let times = json["times"] as? [String: Any] else {
+                return
+            }
+            
+            let entry = self.parsePrayerTimesResponse(times)
+            DispatchQueue.main.async {
+                completion(entry)
+            }
+        }.resume()
+    }
+    
+    private func parsePrayerTimesResponse(_ times: [String: Any]) -> SimpleEntry {
+        guard let firstDate = times.keys.first,
+              let prayerArray = times[firstDate] as? [String] else {
+            return getDefaultEntry()
+        }
+        
+        let prayerTimes = [
+            "İmsak": prayerArray.count > 0 ? cleanTime(prayerArray[0]) : "--:--",
+            "Güneş": prayerArray.count > 1 ? cleanTime(prayerArray[1]) : "--:--",
+            "Öğle": prayerArray.count > 2 ? cleanTime(prayerArray[2]) : "--:--",
+            "İkindi": prayerArray.count > 3 ? cleanTime(prayerArray[3]) : "--:--",
+            "Akşam": prayerArray.count > 4 ? cleanTime(prayerArray[4]) : "--:--",
+            "Yatsı": prayerArray.count > 5 ? cleanTime(prayerArray[5]) : "--:--"
+        ]
+        
+        let nextPrayer = findNextPrayer(from: prayerTimes)
+        
+        let hijriFormatter = DateFormatter()
+        hijriFormatter.calendar = Calendar(identifier: .islamicUmmAlQura)
+        hijriFormatter.dateStyle = .long
+        hijriFormatter.locale = Locale(identifier: "tr_TR")
+        
+        return SimpleEntry(
+            date: Date(),
+            nextPrayer: nextPrayer.name,
+            nextTime: nextPrayer.time,
+            remainingMinutes: nextPrayer.remainingMinutes,
+            hijriDate: hijriFormatter.string(from: Date()),
+            allPrayerTimes: prayerTimes
+        )
+    }
+    
+    private func cleanTime(_ timeString: String) -> String {
+        let cleaned = timeString.components(separatedBy: " ")[0].trimmingCharacters(in: .whitespaces)
+        let regex = try? NSRegularExpression(pattern: "\\d{1,2}:\\d{2}")
+        let range = NSRange(location: 0, length: cleaned.count)
+        if regex?.firstMatch(in: cleaned, range: range) != nil {
+            let components = cleaned.components(separatedBy: ":")
+            if components.count == 2,
+               let hour = Int(components[0]),
+               let minute = Int(components[1]),
+               hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 {
+                return String(format: "%02d:%02d", hour, minute)
+            }
+        }
+        return "--:--"
+    }
+    
+    private func findNextPrayer(from prayerTimes: [String: String]) -> (name: String, time: String, remainingMinutes: Int) {
+        let now = Date()
+        let calendar = Calendar.current
+        let prayers = [("İmsak", prayerTimes["İmsak"] ?? "--:--"),
+                      ("Güneş", prayerTimes["Güneş"] ?? "--:--"),
+                      ("Öğle", prayerTimes["Öğle"] ?? "--:--"),
+                      ("İkindi", prayerTimes["İkindi"] ?? "--:--"),
+                      ("Akşam", prayerTimes["Akşam"] ?? "--:--"),
+                      ("Yatsı", prayerTimes["Yatsı"] ?? "--:--")]
+        
+        for (name, time) in prayers {
+            if time == "--:--" { continue }
+            let components = time.components(separatedBy: ":")
+            if components.count == 2,
+               let hour = Int(components[0]),
+               let minute = Int(components[1]) {
+                var prayerDate = calendar.dateBySettingHour(hour, minute: minute, second: 0, of: now) ?? now
+                if prayerDate <= now {
+                    prayerDate = calendar.date(byAdding: .day, value: 1, to: prayerDate) ?? prayerDate
+                }
+                if prayerDate > now {
+                    let remainingMinutes = Int(prayerDate.timeIntervalSince(now) / 60)
+                    return (name, time, remainingMinutes)
+                }
+            }
+        }
+        
+        return ("İmsak", prayerTimes["İmsak"] ?? "--:--", 0)
+    }
+    
+    private func getCachedPrayerTimes() -> SimpleEntry? {
+        let userDefaults = UserDefaults(suiteName: "group.com.mihmandarmobile.widget")
+        guard let cachedData = userDefaults?.data(forKey: "cachedPrayerTimes"),
+              let cachedEntry = try? JSONDecoder().decode(CachedEntry.self, from: cachedData) else {
+            return nil
+        }
+        
+        // Check if cache is still valid (less than 1 hour old)
+        if Date().timeIntervalSince(cachedEntry.timestamp) < 3600 {
+            return SimpleEntry(
+                date: Date(),
+                nextPrayer: cachedEntry.nextPrayer,
+                nextTime: cachedEntry.nextTime,
+                remainingMinutes: cachedEntry.remainingMinutes,
+                hijriDate: cachedEntry.hijriDate,
+                allPrayerTimes: cachedEntry.allPrayerTimes
+            )
+        }
+        
+        return nil
+    }
+    
+    private func cachePrayerTimes(_ entry: SimpleEntry) {
+        let userDefaults = UserDefaults(suiteName: "group.com.mihmandarmobile.widget")
+        let cachedEntry = CachedEntry(
+            timestamp: Date(),
+            nextPrayer: entry.nextPrayer,
+            nextTime: entry.nextTime,
+            remainingMinutes: entry.remainingMinutes,
+            hijriDate: entry.hijriDate,
+            allPrayerTimes: entry.allPrayerTimes
+        )
+        
+        if let data = try? JSONEncoder().encode(cachedEntry) {
+            userDefaults?.set(data, forKey: "cachedPrayerTimes")
+        }
+    }
+    
+    private func getDefaultEntry() -> SimpleEntry {
+        let hijriFormatter = DateFormatter()
+        hijriFormatter.calendar = Calendar(identifier: .islamicUmmAlQura)
+        hijriFormatter.dateStyle = .long
+        hijriFormatter.locale = Locale(identifier: "tr_TR")
+        
+        return SimpleEntry(
+            date: Date(),
+            nextPrayer: "Hata",
+            nextTime: "--:--",
+            remainingMinutes: 0,
+            hijriDate: hijriFormatter.string(from: Date()),
+            allPrayerTimes: [
+                "İmsak": "--:--",
+                "Güneş": "--:--",
+                "Öğle": "--:--",
+                "İkindi": "--:--",
+                "Akşam": "--:--",
+                "Yatsı": "--:--"
             ]
         )
     }
@@ -81,6 +266,15 @@ struct Provider: IntentTimelineProvider {
 
 struct SimpleEntry: TimelineEntry {
     let date: Date
+    let nextPrayer: String
+    let nextTime: String
+    let remainingMinutes: Int
+    let hijriDate: String
+    let allPrayerTimes: [String: String]
+}
+
+struct CachedEntry: Codable {
+    let timestamp: Date
     let nextPrayer: String
     let nextTime: String
     let remainingMinutes: Int

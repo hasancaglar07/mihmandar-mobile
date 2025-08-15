@@ -119,14 +119,92 @@
                 android:orientation="vertical"
                 android:layout_marginEnd="4dp">
 
-                <include layout="@layout/prayer_time_mini"
-                    android:id="@+id/imsakMini"/>
+                <!-- İmsak -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="@drawable/prayer_item_background"
+                    android:padding="6dp"
+                    android:layout_marginBottom="2dp"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:id="@+id/imsakName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="İmsak"
+                        android:textColor="#177267"
+                        android:textSize="10sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/imsakTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:--"
+                        android:textColor="#1f2937"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"/>
+                </LinearLayout>
 
-                <include layout="@layout/prayer_time_mini"
-                    android:id="@+id/ogleMini"/>
+                <!-- Öğle -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="@drawable/prayer_item_background"
+                    android:padding="6dp"
+                    android:layout_marginBottom="2dp"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:id="@+id/ogleName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Öğle"
+                        android:textColor="#177267"
+                        android:textSize="10sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/ogleTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:--"
+                        android:textColor="#1f2937"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"/>
+                </LinearLayout>
 
-                <include layout="@layout/prayer_time_mini"
-                    android:id="@+id/aksamMini"/>
+                <!-- Akşam -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="@drawable/prayer_item_background"
+                    android:padding="6dp"
+                    android:layout_marginBottom="2dp"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:id="@+id/aksamName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Akşam"
+                        android:textColor="#177267"
+                        android:textSize="10sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/aksamTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:--"
+                        android:textColor="#1f2937"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"/>
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -138,14 +216,92 @@
                 android:orientation="vertical"
                 android:layout_marginStart="4dp">
 
-                <include layout="@layout/prayer_time_mini"
-                    android:id="@+id/gunesMini"/>
+                <!-- Güneş -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="@drawable/prayer_item_background"
+                    android:padding="6dp"
+                    android:layout_marginBottom="2dp"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:id="@+id/gunesName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Güneş"
+                        android:textColor="#177267"
+                        android:textSize="10sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/gunesTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:--"
+                        android:textColor="#1f2937"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"/>
+                </LinearLayout>
 
-                <include layout="@layout/prayer_time_mini"
-                    android:id="@+id/ikindiMini"/>
+                <!-- İkindi -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="@drawable/prayer_item_background"
+                    android:padding="6dp"
+                    android:layout_marginBottom="2dp"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:id="@+id/ikindiName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="İkindi"
+                        android:textColor="#177267"
+                        android:textSize="10sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/ikindiTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:--"
+                        android:textColor="#1f2937"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"/>
+                </LinearLayout>
 
-                <include layout="@layout/prayer_time_mini"
-                    android:id="@+id/yatsiMini"/>
+                <!-- Yatsı -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="@drawable/prayer_item_background"
+                    android:padding="6dp"
+                    android:layout_marginBottom="2dp"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:id="@+id/yatsiName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Yatsı"
+                        android:textColor="#177267"
+                        android:textSize="10sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/yatsiTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:--"
+                        android:textColor="#1f2937"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"/>
+                </LinearLayout>
 
             </LinearLayout>
 

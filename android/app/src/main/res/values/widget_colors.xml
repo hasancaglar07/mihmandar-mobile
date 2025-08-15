@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widget Primary Colors - Dark Theme -->
+    <color name="widget_primary">#FFFFFF</color>
+    <color name="widget_accent">#FF9500</color>
+    <color name="widget_text">#FFFFFF</color>
+    <color name="widget_text_secondary">#8E8E93</color>
+    <color name="widget_icon">#FF9500</color>
+    <color name="widget_background">#1C1C1E</color>
+    <color name="widget_background_secondary">#2C2C2E</color>
+    
+    <!-- Theme Colors -->
+    <color name="widget_theme_light_bg">#ffffff</color>
+    <color name="widget_theme_dark_bg">#1f2937</color>
+    <color name="widget_theme_green_bg">#f0fdf4</color>
+    <color name="widget_theme_gold_bg">#fef3c7</color>
+    
+    <!-- Prayer Time Colors -->
+    <color name="prayer_current">#177267</color>
+    <color name="prayer_normal">#1f2937</color>
+    <color name="prayer_upcoming">#059669</color>
+    
+    <!-- Status Colors -->
+    <color name="status_active">#10b981</color>
+    <color name="status_inactive">#d1d5db</color>
+    <color name="status_warning">#f59e0b</color>
+    <color name="status_error">#ef4444</color>
+</resources>

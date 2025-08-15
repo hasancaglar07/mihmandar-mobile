@@ -6,13 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  Slider,
   Alert,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Colors } from '../constants/colors';
 import { NotificationService } from '../services/notifications';
+import { WidgetService } from '../services/widget';
+import { PrayerDataService } from '../services/prayerData';
+import { useAppSelector, useAppDispatch } from '../store';
+import { updateNotificationSettings, updateEzanSettings } from '../store/slices/settingsSlice';
 
 interface PrayerTimesSettingsProps {
   visible: boolean;
@@ -22,7 +26,7 @@ interface PrayerTimesSettingsProps {
 interface EzanSettings {
   enabled: boolean;
   volume: number;
-  ezanType: 'builtin' | 'traditional' | 'modern';
+  ezanType: 'builtin' | 'traditional' | 'modern' | 'chime';
   vibration: boolean;
 }
 
@@ -40,24 +44,20 @@ interface NotificationSettings {
 }
 
 const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onClose }) => {
+  const dispatch = useAppDispatch();
+  const { notifications } = useAppSelector(state => state.settings);
+  
   const [ezanSettings, setEzanSettings] = useState<EzanSettings>({
-    enabled: false,
-    volume: 0.8,
-    ezanType: 'traditional',
-    vibration: true,
+    enabled: notifications.ezan.enabled,
+    volume: notifications.ezan.volume,
+    ezanType: notifications.ezan.ezanType,
+    vibration: notifications.ezan.vibration,
   });
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
-    enabled: true,
-    beforeMinutes: 10,
-    prayers: {
-      imsak: true,
-      gunes: false,
-      ogle: true,
-      ikindi: true,
-      aksam: true,
-      yatsi: true,
-    },
+    enabled: notifications.enabled,
+    beforeMinutes: notifications.before_minutes,
+    prayers: notifications.prayers,
   });
 
   useEffect(() => {
@@ -78,36 +78,109 @@ const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onCl
 
   const handleEzanToggle = (enabled: boolean) => {
     setEzanSettings(prev => ({ ...prev, enabled }));
+    dispatch(updateEzanSettings({ enabled }));
     NotificationService.setEzanSettings({ ...ezanSettings, enabled });
+    persistAndReschedule({ ...notificationSettings }, { ...ezanSettings, enabled });
   };
 
   const handleEzanVolumeChange = (volume: number) => {
-    setEzanSettings(prev => ({ ...prev, volume }));
-    NotificationService.setEzanSettings({ ...ezanSettings, volume });
+    const newSettings = { ...ezanSettings, volume };
+    setEzanSettings(newSettings);
+    NotificationService.setEzanSettings(newSettings);
+    WidgetService.persistSettingsToNative({ preMinutes: notificationSettings.beforeMinutes, enableEzan: newSettings.enabled, prayers: notificationSettings.prayers }).catch(()=>{});
   };
 
-  const handleEzanTypeChange = (ezanType: 'builtin' | 'traditional' | 'modern') => {
-    setEzanSettings(prev => ({ ...prev, ezanType }));
-    NotificationService.setEzanSettings({ ...ezanSettings, ezanType });
+  const handleEzanTypeChange = (ezanType: 'builtin' | 'traditional' | 'modern' | 'chime') => {
+    const newSettings = { ...ezanSettings, ezanType };
+    setEzanSettings(newSettings);
+    NotificationService.setEzanSettings(newSettings);
+    WidgetService.persistSettingsToNative({ preMinutes: notificationSettings.beforeMinutes, enableEzan: newSettings.enabled, prayers: notificationSettings.prayers }).catch(()=>{});
   };
 
   const handleTestEzan = async () => {
     try {
+      // Test için geçici olarak ezan'ı aktif et
+      const testSettings = { ...ezanSettings, enabled: true };
+      NotificationService.setEzanSettings(testSettings);
+      
+      console.log('🎵 Test edilen ezan türü:', ezanSettings.ezanType);
       await NotificationService.playEzan('test');
-      Alert.alert('Test', 'Ezan testi başlatıldı');
+      
+      Alert.alert(
+        '🎵 Ezan Testi', 
+        `${ezanSettings.ezanType} ezan sesi çalınıyor...\n\nEzan dosyası: ${getEzanFileName(ezanSettings.ezanType)}`,
+        [{ text: 'Tamam', style: 'default' }]
+      );
+      
+      // Orijinal ayarları geri yükle
+      NotificationService.setEzanSettings(ezanSettings);
     } catch (error) {
-      Alert.alert('Hata', 'Ezan çalarken bir hata oluştu');
+      console.error('Ezan test hatası:', error);
+      Alert.alert(
+        'Hata', 
+        `Ezan çalarken bir hata oluştu: ${error.message}\n\nEzan türü: ${ezanSettings.ezanType}\nDosya: ${getEzanFileName(ezanSettings.ezanType)}`,
+        [{ text: 'Tamam', style: 'default' }]
+      );
+    }
+  };
+
+  const getEzanFileName = (ezanType: string) => {
+    switch (ezanType) {
+      case 'traditional': return 'ezan_traditional.mp3';
+      case 'modern': return 'ezan_modern.mp3';
+      case 'chime': return 'ezan_chime.mp3';
+      default: return 'ezan_builtin.mp3';
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      NotificationService.showImmediateNotification(
+        '🔔 Test Bildirimi',
+        'Bildirim sistemi çalışıyor! Emülatörde bildirimler aktif.'
+      );
+      Alert.alert(
+        '✅ Test Başarılı',
+        'Test bildirimi gönderildi! Emülatörün bildirim panelini kontrol edin.',
+        [{ text: 'Tamam', style: 'default' }]
+      );
+    } catch (error) {
+      Alert.alert(
+        'Hata',
+        `Bildirim gönderilemedi: ${error.message}`,
+        [{ text: 'Tamam', style: 'default' }]
+      );
     }
   };
 
   const handlePrayerNotificationToggle = (prayer: keyof NotificationSettings['prayers']) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      prayers: {
-        ...prev.prayers,
-        [prayer]: !prev.prayers[prayer],
-      },
-    }));
+    setNotificationSettings(prev => {
+      const next = {
+        ...prev,
+        prayers: { ...prev.prayers, [prayer]: !prev.prayers[prayer] },
+      };
+      dispatch(updateNotificationSettings({ prayers: next.prayers }));
+      persistAndReschedule(next, ezanSettings);
+      return next;
+    });
+  };
+
+  const persistAndReschedule = async (ns: NotificationSettings, ez: EzanSettings) => {
+    try {
+      // Persist to native for receivers and widgets
+      await WidgetService.persistSettingsToNative({ preMinutes: ns.beforeMinutes, enableEzan: ez.enabled, prayers: ns.prayers });
+    } catch {}
+    try {
+      const snap = await PrayerDataService.loadSnapshot();
+      if (snap && ns.enabled) {
+        NotificationService.schedulePrayerNotifications(
+          { times: snap.times } as any,
+          { enabled: true, before_minutes: ns.beforeMinutes, prayers: ns.prayers } as any
+        );
+      } else if (!ns.enabled) {
+        NotificationService.cancelAllNotifications();
+      }
+    } catch {}
   };
 
   const getPrayerDisplayName = (prayerKey: string): string => {
@@ -147,7 +220,11 @@ const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onCl
           {/* Quick Actions */}
           <View style={styles.quickActionsSection}>
             <View style={styles.quickActionsGrid}>
-              <TouchableOpacity style={styles.quickActionCard}>
+              <TouchableOpacity style={styles.quickActionCard} onPress={async ()=>{
+                try {
+                  await NotificationService.playEzan('test');
+                } catch {}
+              }}>
                 <LinearGradient
                   colors={['#22c55e', '#16a34a']}
                   style={styles.quickActionGradient}
@@ -157,7 +234,19 @@ const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onCl
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.quickActionCard}>
+              <TouchableOpacity style={styles.quickActionCard} onPress={async ()=>{
+                setNotificationSettings(prev=>({...prev, enabled: true}));
+                try {
+                  // Re-schedule with last known snapshot
+                  const snap = await PrayerDataService.loadSnapshot();
+                  if (snap) {
+                    NotificationService.schedulePrayerNotifications(
+                      { times: snap.times } as any,
+                      { enabled: true, before_minutes: 10, prayers: { imsak:true, gunes:true, ogle:true, ikindi:true, aksam:true, yatsi:true } } as any
+                    );
+                  }
+                } catch {}
+              }}>
                 <LinearGradient
                   colors={['#3b82f6', '#2563eb']}
                   style={styles.quickActionGradient}
@@ -167,7 +256,9 @@ const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onCl
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.quickActionCard}>
+              <TouchableOpacity style={styles.quickActionCard} onPress={()=>{
+                try { require('../services/widget').WidgetService.openWidgetSettings(); } catch {}
+              }}>
                 <LinearGradient
                   colors={['#f59e0b', '#d97706']}
                   style={styles.quickActionGradient}
@@ -197,76 +288,86 @@ const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onCl
                 />
               </View>
 
-              {ezanSettings.enabled && (
-                <>
-                  <View style={styles.settingItem}>
-                    <View style={styles.settingLeft}>
-                      <MaterialCommunityIcons name="vibrate" size={24} color={Colors.secondary} />
-                      <Text style={styles.settingLabel}>Titreşim</Text>
-                    </View>
-                    <Switch
-                      value={ezanSettings.vibration}
-                      onValueChange={(vibration) => setEzanSettings(prev => ({ ...prev, vibration }))}
-                      trackColor={{ false: Colors.lightGray, true: Colors.secondary }}
-                      thumbColor={Colors.white}
-                    />
-                  </View>
+              <View style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <MaterialCommunityIcons name="vibrate" size={24} color={Colors.secondary} />
+                  <Text style={styles.settingLabel}>Titreşim</Text>
+                </View>
+                <Switch
+                  value={ezanSettings.vibration}
+                  onValueChange={(vibration) => setEzanSettings(prev => ({ ...prev, vibration }))}
+                  trackColor={{ false: Colors.lightGray, true: Colors.secondary }}
+                  thumbColor={Colors.white}
+                />
+              </View>
 
-                  <View style={styles.volumeContainer}>
-                    <Text style={styles.volumeLabel}>Ses Düzeyi: {Math.round(ezanSettings.volume * 100)}%</Text>
-                    <Slider
-                      style={styles.volumeSlider}
-                      minimumValue={0}
-                      maximumValue={1}
-                      value={ezanSettings.volume}
-                      onValueChange={handleEzanVolumeChange}
-                      minimumTrackTintColor={Colors.primary}
-                      maximumTrackTintColor={Colors.lightGray}
-                      thumbStyle={{ backgroundColor: Colors.primary }}
-                    />
-                  </View>
+              <View style={styles.volumeContainer}>
+                <Text style={styles.volumeLabel}>Ses Düzeyi: {Math.round(ezanSettings.volume * 100)}%</Text>
+                <Slider
+                  style={styles.volumeSlider}
+                  minimumValue={0}
+                  maximumValue={1}
+                  value={ezanSettings.volume}
+                  onValueChange={handleEzanVolumeChange}
+                  minimumTrackTintColor={Colors.primary}
+                  maximumTrackTintColor={Colors.lightGray}
+                  thumbStyle={{ backgroundColor: Colors.primary }}
+                />
+              </View>
 
-                  <View style={styles.ezanTypeContainer}>
-                    <Text style={styles.subsectionTitle}>Ezan Türü</Text>
-                    <View style={styles.ezanTypeGrid}>
-                      {[
-                        { key: 'traditional', name: 'Geleneksel', icon: 'mosque' },
-                        { key: 'modern', name: 'Modern', icon: 'music-note' },
-                        { key: 'builtin', name: 'Basit', icon: 'bell' },
-                      ].map(({ key, name, icon }) => (
-                        <TouchableOpacity
-                          key={key}
-                          style={[
-                            styles.ezanTypeButton,
-                            ezanSettings.ezanType === key && styles.ezanTypeButtonSelected
-                          ]}
-                          onPress={() => handleEzanTypeChange(key as any)}
-                        >
-                          <MaterialCommunityIcons 
-                            name={icon} 
-                            size={24} 
-                            color={ezanSettings.ezanType === key ? Colors.white : Colors.primary} 
-                          />
-                          <Text style={[
-                            styles.ezanTypeText,
-                            ezanSettings.ezanType === key && styles.ezanTypeTextSelected
-                          ]}>{name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-
-                  <TouchableOpacity style={styles.testButton} onPress={handleTestEzan}>
-                    <LinearGradient
-                      colors={[Colors.secondary, '#f59e0b']}
-                      style={styles.testButtonGradient}
+              <View style={styles.ezanTypeContainer}>
+                <Text style={styles.subsectionTitle}>Ezan Türü Seçimi</Text>
+                <Text style={styles.volumeLabel}>Çalmak istediğiniz ezan sesini seçin:</Text>
+                <View style={styles.ezanTypeGrid}>
+                  {[
+                    { key: 'traditional', name: 'Geleneksel', icon: 'mosque' },
+                    { key: 'modern', name: 'Modern', icon: 'music-note' },
+                    { key: 'builtin', name: 'Basit', icon: 'bell' },
+                    { key: 'chime', name: 'Zil', icon: 'bell-ring' },
+                  ].map(({ key, name, icon }) => (
+                    <TouchableOpacity
+                      key={key}
+                      style={[
+                        styles.ezanTypeButton,
+                        ezanSettings.ezanType === key && styles.ezanTypeButtonSelected
+                      ]}
+                      onPress={() => handleEzanTypeChange(key as any)}
                     >
-                      <MaterialCommunityIcons name="play" size={20} color={Colors.white} />
-                      <Text style={styles.testButtonText}>Ezan Testini Dinle</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </>
-              )}
+                      <MaterialCommunityIcons 
+                        name={icon} 
+                        size={24} 
+                        color={ezanSettings.ezanType === key ? Colors.white : Colors.primary} 
+                      />
+                      <Text style={[
+                        styles.ezanTypeText,
+                        ezanSettings.ezanType === key && styles.ezanTypeTextSelected
+                      ]}>{name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity style={[styles.testButton, { flex: 1 }]} onPress={handleTestEzan}>
+                  <LinearGradient
+                    colors={[Colors.secondary, '#f59e0b']}
+                    style={styles.testButtonGradient}
+                  >
+                    <MaterialCommunityIcons name="play" size={20} color={Colors.white} />
+                    <Text style={styles.testButtonText}>Ezan Test</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={[styles.testButton, { flex: 1 }]} onPress={handleTestNotification}>
+                  <LinearGradient
+                    colors={['#3b82f6', '#2563eb']}
+                    style={styles.testButtonGradient}
+                  >
+                    <MaterialCommunityIcons name="bell" size={20} color={Colors.white} />
+                    <Text style={styles.testButtonText}>Bildirim Test</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -282,7 +383,11 @@ const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onCl
                 </View>
                 <Switch
                   value={notificationSettings.enabled}
-                  onValueChange={(enabled) => setNotificationSettings(prev => ({ ...prev, enabled }))}
+                  onValueChange={(enabled) => {
+                    setNotificationSettings(prev => ({ ...prev, enabled }));
+                    dispatch(updateNotificationSettings({ enabled }));
+                    persistAndReschedule({ ...notificationSettings, enabled }, ezanSettings);
+                  }}
                   trackColor={{ false: Colors.lightGray, true: Colors.info }}
                   thumbColor={Colors.white}
                 />
@@ -300,7 +405,11 @@ const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onCl
                       maximumValue={30}
                       step={5}
                       value={notificationSettings.beforeMinutes}
-                      onValueChange={(beforeMinutes) => setNotificationSettings(prev => ({ ...prev, beforeMinutes }))}
+                      onValueChange={(beforeMinutes) => {
+                        setNotificationSettings(prev => ({ ...prev, beforeMinutes }));
+                        dispatch(updateNotificationSettings({ before_minutes: beforeMinutes }));
+                        persistAndReschedule({ ...notificationSettings, beforeMinutes }, ezanSettings);
+                      }}
                       minimumTrackTintColor={Colors.info}
                       maximumTrackTintColor={Colors.lightGray}
                       thumbStyle={{ backgroundColor: Colors.info }}
@@ -388,28 +497,82 @@ const PrayerTimesSettings: React.FC<PrayerTimesSettingsProps> = ({ visible, onCl
           {/* Widget Themes */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🎨 Widget Temaları</Text>
+            <Text style={styles.volumeLabel}>Widget'ınızın görünümünü özelleştirin:</Text>
             
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.themeScroll}>
               {[
-                { name: 'Açık', colors: ['#ffffff', '#f8fffe'], selected: true },
-                { name: 'Koyu', colors: ['#1f2937', '#374151'], selected: false },
-                { name: 'Doğa', colors: ['#10b981', '#059669'], selected: false },
-                { name: 'Altın', colors: ['#f59e0b', '#d97706'], selected: false },
-                { name: 'Gece', colors: ['#6366f1', '#4f46e5'], selected: false },
+                { name: 'Açık', colors: ['#ffffff', '#f8fffe'], themeIndex: 0 },
+                { name: 'Koyu', colors: ['#1f2937', '#374151'], themeIndex: 1 },
+                { name: 'Doğa', colors: ['#f0fdf4', '#10b981'], themeIndex: 2 },
+                { name: 'Altın', colors: ['#fef3c7', '#f59e0b'], themeIndex: 3 },
+                { name: 'Mavi', colors: ['#eff6ff', '#1d4ed8'], themeIndex: 4 },
+                { name: 'Mor', colors: ['#faf5ff', '#7c3aed'], themeIndex: 5 },
+                { name: 'Gradient', colors: ['#667eea', '#764ba2'], themeIndex: 6 },
+                { name: 'Minimal', colors: ['#f8fafc', '#374151'], themeIndex: 7 },
+                { name: 'Kırmızı', colors: ['#fef2f2', '#dc2626'], themeIndex: 8 },
+                { name: 'Turuncu', colors: ['#fff7ed', '#ea580c'], themeIndex: 9 },
               ].map((theme, index) => (
-                <TouchableOpacity key={index} style={styles.themeCard}>
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.themeCard}
+                  onPress={async () => {
+                    try {
+                      const availableThemes = WidgetService.getAvailableThemes();
+                      const selectedTheme = availableThemes[theme.themeIndex];
+                      
+                      // Tema uygula
+                      await WidgetService.setWidgetTheme(selectedTheme);
+                      
+                      // Widget'ı force refresh et
+                      await WidgetService.refreshWidget();
+                      
+                      // Mevcut prayer data ile widget'ı güncelle
+                      try {
+                        const { PrayerDataService } = require('../services/prayerData');
+                        const snapshot = await PrayerDataService.loadSnapshot();
+                        if (snapshot) {
+                          await WidgetService.updateWidgetData(
+                            snapshot.location,
+                            { times: snapshot.times },
+                            snapshot.nextPrayer,
+                            snapshot.locationName
+                          );
+                        }
+                      } catch (e) {
+                        console.warn('Widget data update failed:', e);
+                      }
+                      
+                      Alert.alert(
+                        '✅ Tema Uygulandı',
+                        `${theme.name} teması widget'a uygulandı ve güncellendi!`,
+                        [{ text: 'Tamam', style: 'default' }]
+                      );
+                    } catch (error) {
+                      Alert.alert(
+                        'Hata',
+                        `Tema uygulanırken hata oluştu: ${error.message}`,
+                        [{ text: 'Tamam', style: 'default' }]
+                      );
+                    }
+                  }}
+                >
                   <LinearGradient
                     colors={theme.colors}
                     style={styles.themePreview}
                   >
-                    {theme.selected && (
-                      <MaterialCommunityIcons name="check-circle" size={20} color={Colors.white} />
-                    )}
+                    <MaterialCommunityIcons name="widgets" size={20} color={theme.themeIndex === 1 || theme.themeIndex === 6 ? Colors.white : Colors.text} />
                   </LinearGradient>
                   <Text style={styles.themeName}>{theme.name}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
+            
+            <View style={styles.themeInfo}>
+              <MaterialCommunityIcons name="information-outline" size={16} color={Colors.darkGray} />
+              <Text style={styles.themeInfoText}>
+                Tema değişiklikleri widget'a anında yansır. 3x2 boyutunda tüm vakitler görünür.
+              </Text>
+            </View>
           </View>
 
           {/* Information */}
@@ -698,6 +861,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.text,
     textAlign: 'center',
+  },
+  themeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 8,
+  },
+  themeInfoText: {
+    fontSize: 12,
+    color: Colors.darkGray,
+    marginLeft: 6,
+    flex: 1,
   },
 });
 

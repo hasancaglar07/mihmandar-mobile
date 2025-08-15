@@ -2,6 +2,7 @@ package com.mihmandarmobile.widget
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
+import android.app.AlarmManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
@@ -51,8 +52,6 @@ class PrayerWidgetFullProvider : AppWidgetProvider() {
         setupClickIntents(context, views, appWidgetId)
 
         val prefs = context.getSharedPreferences("prayer_prefs", Context.MODE_PRIVATE)
-        val lat = prefs.getString("lat", null)
-        val lng = prefs.getString("lng", null)
         val themeData = prefs.getString("theme", null)
 
         applyTheme(views, themeData)
@@ -68,6 +67,30 @@ class PrayerWidgetFullProvider : AppWidgetProvider() {
         
         manager.updateAppWidget(appWidgetId, views)
 
+        val snapshot = prefs.getString("widget_data", null)
+        if (snapshot != null) {
+            try {
+                val json = org.json.JSONObject(snapshot)
+                val next = json.optJSONObject("nextPrayer")
+                val name = next?.optString("name", "") ?: ""
+                val time = next?.optString("time", "--:--") ?: "--:--"
+                val remaining = next?.optInt("remainingMinutes", 0) ?: 0
+                val allTimesObj = json.optJSONObject("allPrayerTimes")
+                val map = mutableMapOf<String, String>()
+                if (allTimesObj != null) {
+                    val keys = listOf("imsak","gunes","ogle","ikindi","aksam","yatsi")
+                    for (k in keys) {
+                        val label = when (k) {"imsak"->"İmsak";"gunes"->"Güneş";"ogle"->"Öğle";"ikindi"->"İkindi";"aksam"->"Akşam";"yatsi"->"Yatsı"; else -> k }
+                        map[label] = allTimesObj.optString(k, "--:--")
+                    }
+                }
+                updateWidgetWithAllPrayerData(views, manager, appWidgetId, map, Triple(name, time, remaining))
+                scheduleMinuteRefresh(context, computeTargetMillis(time))
+                return
+            } catch (_: Exception) {}
+        }
+        val lat = prefs.getString("lat", null)
+        val lng = prefs.getString("lng", null)
         if (lat != null && lng != null) {
             fetchPrayerTimes(context, views, manager, appWidgetId, lat, lng)
         } else {
@@ -134,54 +157,132 @@ class PrayerWidgetFullProvider : AppWidgetProvider() {
     ) {
         GlobalScope.launch(Dispatchers.IO) {
             try {
-                val tzOffset = TimeZone.getDefault().rawOffset / 60000
+                // Use vakit.vercel.app API directly
+                val tzOffset = -(TimeZone.getDefault().getOffset(System.currentTimeMillis()) / 60000)
                 val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                
                 val apiUrl = "https://vakit.vercel.app/api/timesForGPS?lat=$lat&lng=$lng&date=$today&days=1&timezoneOffset=$tzOffset&calculationMethod=Turkey&lang=tr"
-                val response = URL(apiUrl).readText()
-                val json = JSONObject(response)
                 
+                val connection = URL(apiUrl).openConnection() as java.net.HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(response)
                 val prayerTimes = parsePrayerTimes(json)
                 val nextPrayer = findNextPrayer(prayerTimes)
                 
                 withContext(Dispatchers.Main) {
                     updateWidgetWithAllPrayerData(views, manager, appWidgetId, prayerTimes, nextPrayer)
+                    scheduleMinuteRefresh(context, computeTargetMillis(nextPrayer.second))
+                    scheduleMidnightRefresh(context)
                 }
                 
+                // Cache response
+                val prefs = context.getSharedPreferences("prayer_prefs", Context.MODE_PRIVATE)
+                prefs.edit().putString("last_times_full", response).apply()
+                
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    showErrorState(views, manager, appWidgetId)
+                // Try cached data
+                val prefs = context.getSharedPreferences("prayer_prefs", Context.MODE_PRIVATE)
+                val cached = prefs.getString("last_times_full", null)
+                if (cached != null) {
+                    try {
+                        val json = JSONObject(cached)
+                        val prayerTimes = parsePrayerTimes(json)
+                        val nextPrayer = findNextPrayer(prayerTimes)
+                        withContext(Dispatchers.Main) {
+                            updateWidgetWithAllPrayerData(views, manager, appWidgetId, prayerTimes, nextPrayer)
+                        }
+                    } catch (ce: Exception) {
+                        withContext(Dispatchers.Main) {
+                            showErrorState(views, manager, appWidgetId)
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        showErrorState(views, manager, appWidgetId)
+                    }
                 }
             }
         }
+    }
+
+    private fun computeTargetMillis(time: String): Long {
+        return try {
+            val parts = time.split(":")
+            if (parts.size < 2) return 0L
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                set(Calendar.HOUR_OF_DAY, parts[0].toInt())
+                set(Calendar.MINUTE, parts[1].toInt())
+            }
+            cal.timeInMillis
+        } catch (e: Exception) { 0L }
+    }
+
+    private fun scheduleMinuteRefresh(context: Context, targetMillis: Long) {
+        if (targetMillis <= 0L) return
+        try {
+            val now = System.currentTimeMillis()
+            if (now >= targetMillis) return
+            val nextMinute = ((now / 60000) + 1) * 60000
+            if (nextMinute >= targetMillis) return
+            val intent = Intent(context, PrayerWidgetFullProvider::class.java).apply { action = ACTION_REFRESH }
+            val pi = PendingIntent.getBroadcast(
+                context, 2201, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextMinute, pi)
+        } catch (_: Exception) {}
+    }
+
+    private fun scheduleMidnightRefresh(context: Context) {
+        try {
+            val cal = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 5)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val intent = Intent(context, PrayerWidgetFullProvider::class.java).apply { action = ACTION_REFRESH }
+            val pi = PendingIntent.getBroadcast(
+                context, 2202, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
+        } catch (_: Exception) {}
     }
 
     private fun parsePrayerTimes(json: JSONObject): Map<String, String> {
         val times = mutableMapOf<String, String>()
         
         try {
+            // Parse vakit.vercel.app format
             val timesObj = json.optJSONObject("times")
-            if (timesObj != null) {
-                val dateKey = timesObj.keys().asSequence().firstOrNull()
-                if (dateKey != null) {
-                    val arr = timesObj.getJSONArray(dateKey)
-                    times["İmsak"] = arr.getString(0)
-                    times["Güneş"] = arr.getString(1)
-                    times["Öğle"] = arr.getString(2)
-                    times["İkindi"] = arr.getString(3)
-                    times["Akşam"] = arr.getString(4)
-                    times["Yatsı"] = arr.getString(5)
-                }
-            } else {
-                val arr = json.optJSONArray("times")
-                if (arr != null && arr.length() > 0) {
-                    val first = arr.getJSONObject(0)
-                    times["İmsak"] = first.optString("fajr", first.optString("imsak", ""))
-                    times["Güneş"] = first.optString("sunrise", first.optString("gunes", ""))
-                    times["Öğle"] = first.optString("dhuhr", first.optString("ogle", ""))
-                    times["İkindi"] = first.optString("asr", first.optString("ikindi", ""))
-                    times["Akşam"] = first.optString("maghrib", first.optString("aksam", ""))
-                    times["Yatsı"] = first.optString("isha", first.optString("yatsi", ""))
+            if (timesObj != null && timesObj.length() > 0) {
+                val dateKey = timesObj.keys().next()
+                val arr = timesObj.getJSONArray(dateKey)
+                
+                if (arr.length() >= 6) {
+                    fun cleanTime(timeStr: String): String {
+                        val cleaned = timeStr.split(" ")[0].trim()
+                        if (cleaned.matches(Regex("\\d{1,2}:\\d{2}"))) {
+                            return cleaned
+                        }
+                        return ""
+                    }
+                    
+                    times["İmsak"] = cleanTime(arr.getString(0))
+                    times["Güneş"] = cleanTime(arr.getString(1))
+                    times["Öğle"] = cleanTime(arr.getString(2))
+                    times["İkindi"] = cleanTime(arr.getString(3))
+                    times["Akşam"] = cleanTime(arr.getString(4))
+                    times["Yatsı"] = cleanTime(arr.getString(5))
+                    
+                    times.entries.removeAll { it.value.isEmpty() }
                 }
             }
         } catch (e: Exception) {
@@ -193,35 +294,58 @@ class PrayerWidgetFullProvider : AppWidgetProvider() {
 
     private fun findNextPrayer(prayerTimes: Map<String, String>): Triple<String, String, Int> {
         val now = Calendar.getInstance()
-        val prayerOrder = listOf("İmsak", "Güneş", "Öğle", "İkindi", "Akşam", "Yatsı")
+        val currentTimeMillis = now.timeInMillis
         
-        for (prayerName in prayerOrder) {
-            val time = prayerTimes[prayerName] ?: continue
-            val timeParts = time.split(":")
-            if (timeParts.size >= 2) {
-                val prayerCal = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, timeParts[0].toInt())
-                    set(Calendar.MINUTE, timeParts[1].toInt())
-                    set(Calendar.SECOND, 0)
-                }
-                
-                if (prayerCal.timeInMillis >= now.timeInMillis) {
-                    val remainingMinutes = ((prayerCal.timeInMillis - now.timeInMillis) / 60000).toInt()
-                    return Triple(prayerName, time, remainingMinutes)
-                }
+        val prayers = listOf(
+            "İmsak" to prayerTimes["İmsak"],
+            "Güneş" to prayerTimes["Güneş"],
+            "Öğle" to prayerTimes["Öğle"],
+            "İkindi" to prayerTimes["İkindi"],
+            "Akşam" to prayerTimes["Akşam"],
+            "Yatsı" to prayerTimes["Yatsı"]
+        )
+        
+        // Find next prayer today
+        for ((name, time) in prayers) {
+            if (time.isNullOrEmpty()) continue
+            
+            val parts = time.split(":")
+            if (parts.size != 2) continue
+            
+            val hour = parts[0].toIntOrNull() ?: continue
+            val minute = parts[1].toIntOrNull() ?: continue
+            
+            if (hour !in 0..23 || minute !in 0..59) continue
+            
+            val prayerCalendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, hour)
+                set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            
+            if (prayerCalendar.timeInMillis > currentTimeMillis) {
+                val remainingMinutes = ((prayerCalendar.timeInMillis - currentTimeMillis) / 60000).toInt()
+                return Triple(name, time, remainingMinutes)
             }
         }
         
-        val tomorrowImsak = prayerTimes["İmsak"] ?: "05:00"
-        val tomorrowCal = Calendar.getInstance().apply {
+        // If no prayer left today, return tomorrow's first prayer (İmsak)
+        val firstPrayer = prayerTimes["İmsak"] ?: "05:00"
+        val parts = firstPrayer.split(":")
+        val hour = parts.getOrNull(0)?.toIntOrNull() ?: 5
+        val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        
+        val tomorrowPrayerCalendar = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_MONTH, 1)
-            val timeParts = tomorrowImsak.split(":")
-            set(Calendar.HOUR_OF_DAY, timeParts[0].toInt())
-            set(Calendar.MINUTE, if (timeParts.size > 1) timeParts[1].toInt() else 0)
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
-        val remainingMinutes = ((tomorrowCal.timeInMillis - now.timeInMillis) / 60000).toInt()
-        return Triple("İmsak", tomorrowImsak, remainingMinutes)
+        
+        val remainingMinutes = ((tomorrowPrayerCalendar.timeInMillis - currentTimeMillis) / 60000).toInt()
+        return Triple("İmsak", firstPrayer, remainingMinutes)
     }
 
     private fun updateWidgetWithAllPrayerData(
@@ -256,33 +380,32 @@ class PrayerWidgetFullProvider : AppWidgetProvider() {
         
         // Update all individual prayer times
         try {
-            // Update each prayer time item if they exist in the layout
+            // Update each prayer time item using explicit IDs in the 4x3 layout
             allPrayerTimes["İmsak"]?.let { time ->
-                views.setTextViewText(com.mihmandarmobile.R.id.imsakItem + com.mihmandarmobile.R.id.tvPrayerTime, time)
-                views.setTextViewText(com.mihmandarmobile.R.id.imsakItem + com.mihmandarmobile.R.id.tvPrayerName, "İmsak")
+                views.setTextViewText(com.mihmandarmobile.R.id.imsakNameFull, "İmsak")
+                views.setTextViewText(com.mihmandarmobile.R.id.imsakTimeFull, time)
             }
             allPrayerTimes["Güneş"]?.let { time ->
-                views.setTextViewText(com.mihmandarmobile.R.id.gunesItem + com.mihmandarmobile.R.id.tvPrayerTime, time)
-                views.setTextViewText(com.mihmandarmobile.R.id.gunesItem + com.mihmandarmobile.R.id.tvPrayerName, "Güneş")
+                views.setTextViewText(com.mihmandarmobile.R.id.gunesNameFull, "Güneş")
+                views.setTextViewText(com.mihmandarmobile.R.id.gunesTimeFull, time)
             }
             allPrayerTimes["Öğle"]?.let { time ->
-                views.setTextViewText(com.mihmandarmobile.R.id.ogleItem + com.mihmandarmobile.R.id.tvPrayerTime, time)
-                views.setTextViewText(com.mihmandarmobile.R.id.ogleItem + com.mihmandarmobile.R.id.tvPrayerName, "Öğle")
+                views.setTextViewText(com.mihmandarmobile.R.id.ogleNameFull, "Öğle")
+                views.setTextViewText(com.mihmandarmobile.R.id.ogleTimeFull, time)
             }
             allPrayerTimes["İkindi"]?.let { time ->
-                views.setTextViewText(com.mihmandarmobile.R.id.ikindiItem + com.mihmandarmobile.R.id.tvPrayerTime, time)
-                views.setTextViewText(com.mihmandarmobile.R.id.ikindiItem + com.mihmandarmobile.R.id.tvPrayerName, "İkindi")
+                views.setTextViewText(com.mihmandarmobile.R.id.ikindiNameFull, "İkindi")
+                views.setTextViewText(com.mihmandarmobile.R.id.ikindiTimeFull, time)
             }
             allPrayerTimes["Akşam"]?.let { time ->
-                views.setTextViewText(com.mihmandarmobile.R.id.aksamItem + com.mihmandarmobile.R.id.tvPrayerTime, time)
-                views.setTextViewText(com.mihmandarmobile.R.id.aksamItem + com.mihmandarmobile.R.id.tvPrayerName, "Akşam")
+                views.setTextViewText(com.mihmandarmobile.R.id.aksamNameFull, "Akşam")
+                views.setTextViewText(com.mihmandarmobile.R.id.aksamTimeFull, time)
             }
             allPrayerTimes["Yatsı"]?.let { time ->
-                views.setTextViewText(com.mihmandarmobile.R.id.yatsiItem + com.mihmandarmobile.R.id.tvPrayerTime, time)
-                views.setTextViewText(com.mihmandarmobile.R.id.yatsiItem + com.mihmandarmobile.R.id.tvPrayerName, "Yatsı")
+                views.setTextViewText(com.mihmandarmobile.R.id.yatsiNameFull, "Yatsı")
+                views.setTextViewText(com.mihmandarmobile.R.id.yatsiTimeFull, time)
             }
         } catch (e: Exception) {
-            // If individual prayer items don't exist, show a compact version
             e.printStackTrace()
         }
         

@@ -2,8 +2,8 @@
 
 // Base URLs
 export const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:8000'  // Development
-  : 'https://your-production-api.com';  // Production
+  ? 'https://new-production-1016.up.railway.app'  // Development (using production API)
+  : 'https://new-production-1016.up.railway.app';  // Production
 
 export const WEB_BASE_URL = __DEV__
   ? 'http://localhost:3000'  // Development Next.js

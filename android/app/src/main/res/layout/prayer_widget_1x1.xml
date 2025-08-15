@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="6dp"
+    android:gravity="center">
+
+    <!-- Prayer Name -->
+    <TextView
+        android:id="@+id/next_prayer_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Yatsı"
+        android:textSize="12sp"
+        android:textColor="@color/widget_primary"
+        android:fontFamily="sans-serif-medium"
+        android:layout_marginBottom="2dp" />
+
+    <!-- Prayer Time -->
+    <TextView
+        android:id="@+id/next_prayer_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="21:40"
+        android:textSize="20sp"
+        android:textColor="@color/widget_primary"
+        android:fontFamily="sans-serif-black" />
+
+</LinearLayout>

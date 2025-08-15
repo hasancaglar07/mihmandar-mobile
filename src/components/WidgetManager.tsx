@@ -11,8 +11,17 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Slider from '@react-native-community/slider';
 import { Colors } from '../constants/colors';
 import { WidgetService } from '../services/widget';
+import { useAppDispatch, useAppSelector } from '../store';
+import {
+  updateWidgetSettings,
+  updateNotificationSettings,
+  updateEzanSettings,
+  togglePrayerNotification,
+} from '../store/slices/settingsSlice';
+import { NotificationService } from '../services/notifications';
 
 interface WidgetManagerProps {
   visible: boolean;
@@ -20,85 +29,63 @@ interface WidgetManagerProps {
 }
 
 const WidgetManager: React.FC<WidgetManagerProps> = ({ visible, onClose }) => {
-  const [isWidgetEnabled, setIsWidgetEnabled] = useState(false);
-  const [isWidgetAdded, setIsWidgetAdded] = useState(false);
-  const [selectedTheme, setSelectedTheme] = useState(0);
-  const [selectedWidgetType, setSelectedWidgetType] = useState<'compact' | 'standard' | 'full'>('standard');
-  const [customTheme, setCustomTheme] = useState({
-    background: '#ffffff',
-    primaryColor: '#177267',
-    textColor: '#1f2937',
-    accentColor: '#ffc574',
-  });
+  const dispatch = useAppDispatch();
+  const settings = useAppSelector(state => state.settings);
+  const { widget, notifications } = settings;
 
   useEffect(() => {
     if (visible) {
-      loadWidgetStatus();
+      // Sync with native widget state if needed
+      WidgetService.isWidgetEnabled().then(enabled => {
+        if (enabled !== widget.enabled) {
+          dispatch(updateWidgetSettings({ enabled }));
+        }
+      });
     }
-  }, [visible]);
+  }, [visible, widget.enabled, dispatch]);
 
-  const loadWidgetStatus = async () => {
-    try {
-      const enabled = await WidgetService.isWidgetEnabled();
-      const added = await WidgetService.isWidgetAddedToHomeScreen();
-      setIsWidgetEnabled(enabled);
-      setIsWidgetAdded(added);
-    } catch (error) {
-      console.error('Error loading widget status:', error);
-    }
-  };
-
-  const handleEnableWidget = async (value: boolean) => {
+  const handleToggleWidget = async (value: boolean) => {
     if (value) {
       const success = await WidgetService.showWidgetInstallationPrompt();
-      if (success) {
-        setIsWidgetEnabled(true);
-        loadWidgetStatus();
-      }
+      dispatch(updateWidgetSettings({ enabled: success }));
     } else {
-      setIsWidgetEnabled(false);
+      // Optionally, you can add a function to remove the widget
+      dispatch(updateWidgetSettings({ enabled: false }));
     }
-  };
-
-  const handleAddWidget = () => {
-    WidgetService.openWidgetSettings();
   };
 
   const handleRefreshWidget = async () => {
     try {
       await WidgetService.refreshWidget();
-      Alert.alert('✅ Başarılı', 'Widget güncellendi!');
+      Alert.alert('✅ Başarılı', 'Widget başarıyla yenilendi!');
     } catch (error) {
-      Alert.alert('❌ Hata', 'Widget güncellenirken bir hata oluştu.');
+      Alert.alert('❌ Hata', 'Widget yenilenirken bir hata oluştu.');
     }
   };
 
-  const handleThemeChange = async (themeIndex: number) => {
-    try {
-      const themes = WidgetService.getAvailableThemes();
-      await WidgetService.setWidgetTheme(themes[themeIndex]);
-      setSelectedTheme(themeIndex);
-      Alert.alert('🎨 Tema Değiştirildi', 'Widget teması güncellendi!');
-    } catch (error) {
-      Alert.alert('❌ Hata', 'Tema değiştirilirken bir hata oluştu.');
-    }
-  };
+  const themes = [
+    { name: 'Açık', key: 'light', colors: ['#ffffff', '#f8fffe'] },
+    { name: 'Koyu', key: 'dark', colors: ['#1f2937', '#374151'] },
+    { name: 'Doğa', key: 'green', colors: ['#10b981', '#059669'] },
+    { name: 'Altın', key: 'gold', colors: ['#f59e0b', '#d97706'] },
+  ];
 
-  const themes = WidgetService.getAvailableThemes();
+  const widgetTypes = [
+    { key: 'compact', name: 'Kompakt', description: 'Sadece sıradaki vakit', icon: 'view-compact' },
+    { key: 'standard', name: 'Standart', description: 'Sıradaki vakit + Hicri tarih', icon: 'view-module' },
+    { key: 'full', name: 'Tam', description: 'Tüm günün vakitleri', icon: 'view-grid' },
+  ];
 
   if (!visible) return null;
 
   return (
     <View style={styles.overlay}>
       <View style={styles.container}>
-        <LinearGradient
-          colors={['#f0fdf4', '#ecfdf5', '#d1fae5']}
-          style={styles.header}
-        >
+        <LinearGradient colors={['#f0fdf4', '#ecfdf5', '#d1fae5']} style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
-              <MaterialCommunityIcons name="widgets" size={28} color={Colors.primary} />
-              <Text style={styles.title}>Widget Yönetimi</Text>
+              <MaterialCommunityIcons name="tune" size={28} color={Colors.primary} />
+              <Text style={styles.title}>Ayarlar</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <MaterialCommunityIcons name="close" size={24} color={Colors.darkGray} />
@@ -107,245 +94,155 @@ const WidgetManager: React.FC<WidgetManagerProps> = ({ visible, onClose }) => {
         </LinearGradient>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Widget Status */}
+          {/* Instructions */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📱 Widget Durumu</Text>
-            
-            <View style={styles.statusCard}>
-              <View style={styles.statusItem}>
-                <View style={styles.statusLeft}>
-                  <MaterialCommunityIcons 
-                    name="toggle-switch" 
-                    size={24} 
-                    color={isWidgetEnabled ? Colors.success : Colors.darkGray} 
-                  />
-                  <Text style={styles.statusLabel}>Widget Etkin</Text>
-                </View>
+            <Text style={styles.sectionTitle}>💡 Widget Nasıl Eklenir?</Text>
+            <View style={styles.instructionsCard}>
+              <Text style={styles.stepText}>
+                1. Ana ekranınızda boş bir alana uzun basın.
+              </Text>
+              <Text style={styles.stepText}>
+                2. {Platform.OS === 'android' ? '"Widget\'lar" menüsünü açın.' : '"+" butonuna dokunun.'}
+              </Text>
+              <Text style={styles.stepText}>
+                3. "Mihmandar" uygulamasını bulun ve istediğiniz widget'ı ana ekranınıza sürükleyin.
+              </Text>
+            </View>
+          </View>
+
+          {/* Widget Settings */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📱 Widget Ayarları</Text>
+            <View style={styles.card}>
+              <View style={styles.settingRow}>
+                <Text style={styles.settingLabel}>Widget'ı Etkinleştir</Text>
                 <Switch
-                  value={isWidgetEnabled}
-                  onValueChange={handleEnableWidget}
+                  value={widget.enabled}
+                  onValueChange={handleToggleWidget}
                   trackColor={{ false: Colors.lightGray, true: Colors.primary }}
                   thumbColor={Colors.white}
                 />
               </View>
+              <TouchableOpacity style={styles.button} onPress={handleRefreshWidget}>
+                <MaterialCommunityIcons name="refresh" size={20} color={Colors.white} />
+                <Text style={styles.buttonText}>Widget'ı Şimdi Yenile</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-              <View style={styles.statusItem}>
-                <View style={styles.statusLeft}>
-                  <MaterialCommunityIcons 
-                    name="home" 
-                    size={24} 
-                    color={isWidgetAdded ? Colors.success : Colors.darkGray} 
-                  />
-                  <Text style={styles.statusLabel}>Ana Ekrana Eklendi</Text>
-                </View>
-                <MaterialCommunityIcons 
-                  name={isWidgetAdded ? "check-circle" : "close-circle"} 
-                  size={24} 
-                  color={isWidgetAdded ? Colors.success : Colors.error} 
+          {/* Widget Type */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🖼️ Widget Türü</Text>
+            <View style={styles.card}>
+              {widgetTypes.map(({ key, name, description, icon }) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.typeRow, widget.type === key && styles.typeRowSelected]}
+                  onPress={() => dispatch(updateWidgetSettings({ type: key as any }))}
+                >
+                  <MaterialCommunityIcons name={icon} size={28} color={widget.type === key ? Colors.primary : Colors.darkGray} />
+                  <View style={styles.typeTextContainer}>
+                    <Text style={[styles.typeName, widget.type === key && styles.typeNameSelected]}>{name}</Text>
+                    <Text style={styles.typeDescription}>{description}</Text>
+                  </View>
+                  {widget.type === key && <MaterialCommunityIcons name="check-circle" size={24} color={Colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Widget Theme */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🎨 Widget Teması</Text>
+            <View style={styles.themeGrid}>
+              {themes.map(theme => (
+                <TouchableOpacity
+                  key={theme.key}
+                  onPress={() => dispatch(updateWidgetSettings({ theme: theme.key as any }))}
+                >
+                  <LinearGradient colors={theme.colors} style={[styles.themeCard, widget.theme === theme.key && styles.selectedThemeCard]}>
+                    {widget.theme === theme.key && <MaterialCommunityIcons name="check" size={24} color={Colors.white} />}
+                  </LinearGradient>
+                  <Text style={styles.themeName}>{theme.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Notification Settings */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🔔 Bildirim Ayarları</Text>
+            <View style={styles.card}>
+              <View style={styles.settingRow}>
+                <Text style={styles.settingLabel}>Tüm Bildirimler</Text>
+                <Switch
+                  value={notifications.enabled}
+                  onValueChange={v => dispatch(updateNotificationSettings({ enabled: v }))}
+                  trackColor={{ false: Colors.lightGray, true: Colors.primary }}
+                  thumbColor={Colors.white}
                 />
               </View>
-            </View>
-          </View>
-
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⚡ Hızlı İşlemler</Text>
-            
-            <TouchableOpacity 
-              style={[styles.actionButton, !isWidgetEnabled && styles.disabledButton]}
-              onPress={handleAddWidget}
-              disabled={!isWidgetEnabled}
-            >
-              <LinearGradient
-                colors={isWidgetEnabled ? [Colors.primary, '#059669'] : [Colors.lightGray, Colors.darkGray]}
-                style={styles.actionGradient}
-              >
-                <MaterialCommunityIcons name="plus" size={24} color={Colors.white} />
-                <Text style={styles.actionText}>Widget Ekle</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.actionButton, !isWidgetAdded && styles.disabledButton]}
-              onPress={handleRefreshWidget}
-              disabled={!isWidgetAdded}
-            >
-              <LinearGradient
-                colors={isWidgetAdded ? [Colors.secondary, '#f59e0b'] : [Colors.lightGray, Colors.darkGray]}
-                style={styles.actionGradient}
-              >
-                <MaterialCommunityIcons name="refresh" size={24} color={Colors.white} />
-                <Text style={styles.actionText}>Widget Yenile</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-
-          {/* Widget Type Selection */}
-          {isWidgetEnabled && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📱 Widget Türü</Text>
-              
-              <View style={styles.widgetTypeGrid}>
-                {[
-                  { key: 'compact', name: 'Kompakt', description: 'Sadece sıradaki namaz', icon: 'view-compact' },
-                  { key: 'standard', name: 'Standart', description: 'Sıradaki + Hijri tarih', icon: 'view-module' },
-                  { key: 'full', name: 'Tam', description: 'Tüm namaz vakitleri', icon: 'view-grid' },
-                ].map(({ key, name, description, icon }) => (
-                  <TouchableOpacity
-                    key={key}
-                    style={[
-                      styles.widgetTypeCard,
-                      selectedWidgetType === key && styles.selectedWidgetType
-                    ]}
-                    onPress={() => setSelectedWidgetType(key as any)}
-                  >
-                    <MaterialCommunityIcons 
-                      name={icon} 
-                      size={32} 
-                      color={selectedWidgetType === key ? Colors.white : Colors.primary} 
+              {notifications.enabled && (
+                <>
+                  <View style={styles.sliderContainer}>
+                    <Text style={styles.settingLabel}>Hatırlatma Zamanı: {notifications.before_minutes} dk önce</Text>
+                    <Slider
+                      minimumValue={0}
+                      maximumValue={60}
+                      step={5}
+                      value={notifications.before_minutes}
+                      onSlidingComplete={v => dispatch(updateNotificationSettings({ before_minutes: v }))}
                     />
-                    <Text style={[
-                      styles.widgetTypeName,
-                      selectedWidgetType === key && styles.widgetTypeNameSelected
-                    ]}>{name}</Text>
-                    <Text style={[
-                      styles.widgetTypeDescription,
-                      selectedWidgetType === key && styles.widgetTypeDescriptionSelected
-                    ]}>{description}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Theme Selection */}
-          {isWidgetEnabled && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🎨 Widget Teması</Text>
-              
-              <View style={styles.themeGrid}>
-                {themes.map((theme, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.themeCard,
-                      selectedTheme === index && styles.selectedTheme
-                    ]}
-                    onPress={() => handleThemeChange(index)}
-                  >
-                    <View 
-                      style={[
-                        styles.themePreview,
-                        { backgroundColor: theme.background }
-                      ]}
-                    >
-                      <View style={[styles.themePrimaryBar, { backgroundColor: theme.primaryColor }]} />
-                      <View style={styles.themeTextLines}>
-                        <View style={[styles.themeTextLine, { backgroundColor: theme.textColor }]} />
-                        <View style={[styles.themeTextLine, styles.themeTextLineShort, { backgroundColor: theme.accentColor }]} />
-                      </View>
-                    </View>
-                    {selectedTheme === index && (
-                      <MaterialCommunityIcons 
-                        name="check-circle" 
-                        size={20} 
-                        color={Colors.success}
-                        style={styles.themeCheckIcon}
+                  </View>
+                  {Object.keys(notifications.prayers).map(prayer => (
+                    <View key={prayer} style={styles.settingRow}>
+                      <Text style={styles.settingLabel}>{prayer.charAt(0).toUpperCase() + prayer.slice(1)}</Text>
+                      <Switch
+                        value={notifications.prayers[prayer as keyof typeof notifications.prayers]}
+                        onValueChange={() => dispatch(togglePrayerNotification(prayer as any))}
                       />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-              
-              {/* Custom Theme Builder */}
-              <View style={styles.customThemeContainer}>
-                <Text style={styles.customThemeTitle}>🛠️ Özel Tema Oluştur</Text>
-                
-                <View style={styles.colorPickerGrid}>
-                  {[
-                    { key: 'background', name: 'Arka Plan', color: customTheme.background },
-                    { key: 'primaryColor', name: 'Ana Renk', color: customTheme.primaryColor },
-                    { key: 'textColor', name: 'Metin Rengi', color: customTheme.textColor },
-                    { key: 'accentColor', name: 'Vurgu Rengi', color: customTheme.accentColor },
-                  ].map(({ key, name, color }) => (
-                    <View key={key} style={styles.colorPickerItem}>
-                      <Text style={styles.colorPickerLabel}>{name}</Text>
-                      <TouchableOpacity
-                        style={[styles.colorPickerButton, { backgroundColor: color }]}
-                        onPress={() => {
-                          // Color picker functionality would go here
-                          Alert.alert('Renk Seçici', 'Renk seçici özelliği geliştirilecek');
-                        }}
-                      >
-                        <MaterialCommunityIcons name="palette" size={16} color={Colors.white} />
-                      </TouchableOpacity>
                     </View>
                   ))}
-                </View>
-              </View>
+                </>
+              )}
             </View>
-          )}
+          </View>
 
-          {/* Widget Preview */}
-          {isWidgetEnabled && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>👀 Widget Önizleme</Text>
-              
-              <View style={styles.widgetPreview}>
-                <LinearGradient
-                  colors={[themes[selectedTheme].background, themes[selectedTheme].background]}
-                  style={styles.previewCard}
-                >
-                  <View style={styles.previewHeader}>
-                    <MaterialCommunityIcons name="mosque" size={20} color={themes[selectedTheme].primaryColor} />
-                    <Text style={[styles.previewTitle, { color: themes[selectedTheme].textColor }]}>
-                      Mihmandar
-                    </Text>
-                  </View>
-                  <Text style={[styles.previewNext, { color: themes[selectedTheme].primaryColor }]}>
-                    Sıradaki: Öğle
-                  </Text>
-                  <Text style={[styles.previewTime, { color: themes[selectedTheme].textColor }]}>
-                    12:45 (≈ 23 dk)
-                  </Text>
-                  <Text style={[styles.previewDate, { color: themes[selectedTheme].accentColor }]}>
-                    🌙 15 Rabiulevvel 1446
-                  </Text>
-                </LinearGradient>
-              </View>
-            </View>
-          )}
-
-          {/* Instructions */}
+          {/* Ezan Settings */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💡 Nasıl Kullanılır?</Text>
-            
-            <View style={styles.instructionsCard}>
-              <View style={styles.instructionStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>1</Text>
-                </View>
-                <Text style={styles.stepText}>Widget'ı etkinleştirin</Text>
+            <Text style={styles.sectionTitle}>🔊 Ezan Sesi Ayarları</Text>
+            <View style={styles.card}>
+              <View style={styles.settingRow}>
+                <Text style={styles.settingLabel}>Ezan Okunsun</Text>
+                <Switch
+                  value={notifications.ezan.enabled}
+                  onValueChange={v => dispatch(updateEzanSettings({ enabled: v }))}
+                />
               </View>
-              
-              <View style={styles.instructionStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>2</Text>
-                </View>
-                <Text style={styles.stepText}>
-                  {Platform.OS === 'android' 
-                    ? 'Ana ekranınızda boş alana uzun basın ve "Widget\'lar" seçeneğini bulun'
-                    : 'Ana ekranınızda boş alana uzun basın ve "+" butonuna dokunun'
-                  }
-                </Text>
-              </View>
-              
-              <View style={styles.instructionStep}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>3</Text>
-                </View>
-                <Text style={styles.stepText}>"Mihmandar" uygulamasını bulun ve widget'ı sürükleyip bırakın</Text>
-              </View>
+              {notifications.ezan.enabled && (
+                <>
+                  <View style={styles.settingRow}>
+                    <Text style={styles.settingLabel}>Titreşim</Text>
+                    <Switch
+                      value={notifications.ezan.vibration}
+                      onValueChange={v => dispatch(updateEzanSettings({ vibration: v }))}
+                    />
+                  </View>
+                  <View style={styles.sliderContainer}>
+                    <Text style={styles.settingLabel}>Ses Seviyesi: {Math.round(notifications.ezan.volume * 100)}%</Text>
+                    <Slider
+                      minimumValue={0}
+                      maximumValue={1}
+                      value={notifications.ezan.volume}
+                      onSlidingComplete={v => dispatch(updateEzanSettings({ volume: v }))}
+                    />
+                  </View>
+                  <TouchableOpacity style={styles.button} onPress={() => NotificationService.playEzan('test')}>
+                    <MaterialCommunityIcons name="play" size={20} color={Colors.white} />
+                    <Text style={styles.buttonText}>Ezan Sesini Test Et</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -361,20 +258,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 1000,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
   },
   container: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    marginTop: 100,
+    height: '90%',
+    backgroundColor: '#f0f2f5',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    padding: 20,
   },
   headerContent: {
     flexDirection: 'row',
@@ -386,7 +281,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: Colors.text,
     marginLeft: 12,
@@ -396,236 +291,114 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: Colors.text,
     marginBottom: 12,
+    paddingHorizontal: 4,
   },
-  statusCard: {
+  card: {
     backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
   },
-  statusItem: {
+  instructionsCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+  },
+  stepText: {
+    fontSize: 14,
+    color: Colors.darkGray,
+    lineHeight: 20,
+  },
+  settingRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.lightGray,
+    borderBottomColor: '#f0f2f5',
   },
-  statusLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusLabel: {
+  settingLabel: {
     fontSize: 16,
     color: Colors.text,
-    marginLeft: 12,
   },
-  actionButton: {
-    marginBottom: 12,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  actionGradient: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 16,
   },
-  actionText: {
+  buttonText: {
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.white,
     marginLeft: 8,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: 8,
+  },
+  typeRowSelected: {
+    backgroundColor: '#e6f4f2',
+    borderColor: Colors.primary,
+  },
+  typeTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  typeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  typeNameSelected: {
+    color: Colors.primary,
+  },
+  typeDescription: {
+    fontSize: 13,
+    color: Colors.darkGray,
   },
   themeGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  themeCard: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    overflow: 'hidden',
-  },
-  selectedTheme: {
-    borderColor: Colors.primary,
-  },
-  themePreview: {
-    width: 80,
-    height: 80,
-    padding: 8,
-    position: 'relative',
-  },
-  themePrimaryBar: {
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 8,
-  },
-  themeTextLines: {
-    flex: 1,
     justifyContent: 'space-around',
   },
-  themeTextLine: {
-    height: 3,
-    borderRadius: 1.5,
-    marginBottom: 4,
-  },
-  themeTextLineShort: {
-    width: '60%',
-  },
-  themeCheckIcon: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-  },
-  widgetPreview: {
-    alignItems: 'center',
-  },
-  previewCard: {
-    width: 200,
-    padding: 16,
+  themeCard: {
+    width: 64,
+    height: 64,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
-  },
-  previewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  previewTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  previewNext: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  previewTime: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  previewDate: {
-    fontSize: 10,
-    fontStyle: 'italic',
-  },
-  instructionsCard: {
-    backgroundColor: Colors.background,
-    borderRadius: 16,
-    padding: 16,
-  },
-  instructionStep: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-  },
-  stepNumberText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: Colors.white,
-  },
-  stepText: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.text,
-    lineHeight: 20,
-  },
-  widgetTypeGrid: {
-    gap: 12,
-  },
-  widgetTypeCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 20,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.lightGray,
-    marginBottom: 12,
+    borderColor: 'transparent',
   },
-  selectedWidgetType: {
-    backgroundColor: Colors.primary,
+  selectedThemeCard: {
     borderColor: Colors.primary,
   },
-  widgetTypeName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.text,
+  themeName: {
     marginTop: 8,
-  },
-  widgetTypeNameSelected: {
-    color: Colors.white,
-  },
-  widgetTypeDescription: {
-    fontSize: 12,
-    color: Colors.darkGray,
     textAlign: 'center',
-    marginTop: 4,
-  },
-  widgetTypeDescriptionSelected: {
-    color: Colors.white,
-    opacity: 0.9,
-  },
-  customThemeContainer: {
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: Colors.background,
-    borderRadius: 12,
-  },
-  customThemeTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
     color: Colors.text,
-    marginBottom: 12,
   },
-  colorPickerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  colorPickerItem: {
-    flex: 1,
-    minWidth: '45%',
-  },
-  colorPickerLabel: {
-    fontSize: 12,
-    color: Colors.darkGray,
-    marginBottom: 6,
-  },
-  colorPickerButton: {
-    height: 40,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
+  sliderContainer: {
+    paddingVertical: 12,
   },
 });
 

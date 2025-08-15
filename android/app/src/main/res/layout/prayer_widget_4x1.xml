@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_background"
+    android:padding="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Current Prayer Icon -->
+    <ImageView
+        android:id="@+id/current_prayer_icon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_night"
+        android:tint="@color/widget_primary"
+        android:layout_marginEnd="6dp" />
+
+    <!-- Current Prayer Time -->
+    <TextView
+        android:id="@+id/next_prayer_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="21:40"
+        android:textSize="18sp"
+        android:textColor="@color/widget_primary"
+        android:fontFamily="sans-serif-black"
+        android:layout_marginEnd="12dp" />
+
+    <!-- All Prayer Times -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <!-- İmsak -->
+        <TextView
+            android:id="@+id/imsak_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="04:20"
+            android:textSize="12sp"
+            android:textColor="#9C27B0"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Güneş -->
+        <TextView
+            android:id="@+id/gunes_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="06:07"
+            android:textSize="12sp"
+            android:textColor="#FF9800"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Öğle -->
+        <TextView
+            android:id="@+id/ogle_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="13:14"
+            android:textSize="12sp"
+            android:textColor="#FFC107"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginEnd="8dp" />
+
+        <!-- İkindi -->
+        <TextView
+            android:id="@+id/ikindi_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="17:03"
+            android:textSize="12sp"
+            android:textColor="#FF5722"
+            android:fontFamily="sans-serif-medium" />
+
+    </LinearLayout>
+
+</LinearLayout>

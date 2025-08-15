@@ -8,6 +8,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <application
       android:name=".MainApplication"
@@ -16,7 +22,8 @@
       android:roundIcon="@mipmap/ic_launcher_round"
       android:allowBackup="false"
       android:theme="@style/AppTheme"
-      android:supportsRtl="true">
+      android:supportsRtl="true"
+      android:usesCleartextTraffic="true">
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
@@ -37,7 +44,7 @@
 
       <!-- App Widget Receivers -->
       <receiver
-        android:name=".widget.PrayerWidgetProvider"
+        android:name=".PrayerWidgetProvider"
         android:exported="false"
         android:label="Namaz Vakti - Standart">
         <intent-filter>
@@ -71,11 +78,101 @@
           android:name="android.appwidget.provider"
           android:resource="@xml/prayer_widget_full_info" />
       </receiver>
+
+      <receiver
+        android:name=".widget.PrayerWidget4x1Provider"
+        android:exported="false"
+        android:label="Namaz Vakti - 4x1">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/prayer_widget_4x1_info" />
+      </receiver>
+
+      <receiver
+        android:name=".widget.PrayerWidget3x2Provider"
+        android:exported="false"
+        android:label="Namaz Vakti - 3x2">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/prayer_widget_3x2_info" />
+      </receiver>
+
+      <receiver
+        android:name=".widget.PrayerWidget2x1Provider"
+        android:exported="false"
+        android:label="Namaz Vakti - 2x1">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/prayer_widget_2x1_info" />
+      </receiver>
+
+      <receiver
+        android:name=".widget.PrayerWidget4x2Provider"
+        android:exported="false"
+        android:label="Namaz Vakti - 4x2">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/prayer_widget_4x2_info" />
+      </receiver>
+
+      <receiver
+        android:name=".widget.PrayerWidget1x1Provider"
+        android:exported="false"
+        android:label="Namaz Vakti - 1x1">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/prayer_widget_1x1_info" />
+      </receiver>
       <receiver android:name=".widget.PrayerWidgetBootReceiver" android:exported="false">
         <intent-filter>
           <action android:name="android.intent.action.BOOT_COMPLETED" />
           <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
         </intent-filter>
       </receiver>
+      <!-- Schedule periodic sync on boot/package replaced -->
+      <receiver android:name=".PrayerAppInitializer" android:exported="false">
+        <intent-filter>
+          <action android:name="android.intent.action.BOOT_COMPLETED" />
+          <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        </intent-filter>
+      </receiver>
+
+      <!-- Alarm receiver for pre-alarm and exact azan -->
+      <receiver android:name=".widget.PrayerAlarmReceiver" android:exported="false">
+        <intent-filter>
+          <action android:name="PRAYER_PRE_ALARM" />
+          <action android:name="PRAYER_ALARM" />
+          <action android:name="PRAYER_STOP" />
+          <action android:name="PRAYER_SNOOZE" />
+        </intent-filter>
+      </receiver>
+
+      <!-- Lifecycle signals to softly refresh widgets -->
+      <receiver android:name=".widget.WidgetLifecycleReceiver" android:exported="false">
+        <intent-filter>
+          <action android:name="android.intent.action.TIME_SET" />
+          <action android:name="android.intent.action.DATE_CHANGED" />
+          <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+          <action android:name="android.intent.action.USER_PRESENT" />
+          <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+        </intent-filter>
+      </receiver>
+
+      <!-- WorkManager uses JobScheduler; no explicit service needed here. -->
     </application>
 </manifest>

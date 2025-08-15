@@ -1,76 +1,172 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Compact Widget - Only Next Prayer -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:padding="12dp"
-    android:background="@drawable/widget_background_compact">
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="4dp"
+    android:gravity="center_horizontal">
 
-    <!-- Prayer Icon -->
+    <!-- Header Section -->
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:layout_marginEnd="12dp">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_mosque"
+            android:tint="@color/widget_primary" />
 
         <TextView
-            android:id="@+id/tvPrayerIconCompact"
-            android:layout_width="wrap_content"
+            android:id="@+id/location_text"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="🕌"
-            android:textSize="28sp"/>
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="Mihmandar"
+            android:textSize="12sp"
+            android:textColor="@color/widget_text"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
     </LinearLayout>
 
-    <!-- Prayer Info -->
+    <!-- Next Prayer Section -->
     <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center_vertical">
+        android:background="@drawable/next_prayer_background"
+        android:padding="6dp"
+        android:layout_marginBottom="4dp"
+        android:gravity="center">
 
         <TextView
-            android:id="@+id/tvNextCompact"
+            android:id="@+id/next_prayer_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Sıradaki: Öğle"
-            android:textColor="#177267"
-            android:textSize="12sp"
-            android:textStyle="bold"/>
+            android:textSize="14sp"
+            android:textColor="@color/widget_primary"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="2dp" />
 
         <TextView
-            android:id="@+id/tvTimeCompact"
+            android:id="@+id/next_prayer_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="12:45"
-            android:textColor="#1f2937"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:fontFamily="monospace"
-            android:layout_marginTop="2dp"/>
+            android:text="13:00"
+            android:textSize="20sp"
+            android:textColor="@color/widget_primary"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="2dp" />
 
         <TextView
-            android:id="@+id/tvRemainingCompact"
+            android:id="@+id/remaining_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="23 dk"
-            android:textColor="#6b7280"
-            android:textSize="10sp"
-            android:layout_marginTop="1dp"/>
+            android:text="2s 30dk kaldı"
+            android:textSize="11sp"
+            android:textColor="@color/widget_text_secondary" />
 
     </LinearLayout>
 
-    <!-- Status Indicator -->
-    <TextView
-        android:id="@+id/tvStatusCompact"
-        android:layout_width="wrap_content"
+    <!-- Quick Prayer Times -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="●"
-        android:textColor="#10b981"
-        android:textSize="8sp"
-        android:layout_gravity="top|end"/>
+        android:orientation="horizontal">
+
+        <!-- İmsak -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="2dp">
+
+            <ImageView
+                android:id="@+id/imsak_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_moon"
+                android:tint="@color/widget_icon" />
+
+            <TextView
+                android:id="@+id/imsak_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="05:30"
+                android:textSize="10sp"
+                android:textColor="@color/widget_text"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="1dp" />
+
+        </LinearLayout>
+
+        <!-- Öğle -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="2dp">
+
+            <ImageView
+                android:id="@+id/ogle_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_sun_high"
+                android:tint="@color/widget_icon" />
+
+            <TextView
+                android:id="@+id/ogle_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="13:00"
+                android:textSize="10sp"
+                android:textColor="@color/widget_text"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="1dp" />
+
+        </LinearLayout>
+
+        <!-- Akşam -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="2dp">
+
+            <ImageView
+                android:id="@+id/aksam_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_sunset"
+                android:tint="@color/widget_icon" />
+
+            <TextView
+                android:id="@+id/aksam_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="19:00"
+                android:textSize="10sp"
+                android:textColor="@color/widget_text"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="1dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </LinearLayout>
