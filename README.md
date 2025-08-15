@@ -1,4 +1,107 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Mihmandar Mobile - Namaz Vakitleri Uygulaması
+
+🕌 **Mihmandar** - Modern ve kullanıcı dostu namaz vakitleri uygulaması
+
+## 📱 Özellikler
+
+### 🌍 **Konum Tabanlı Namaz Vakitleri**
+- GPS ile otomatik konum tespiti
+- 81 il ve tüm ilçeler için manuel seçim
+- Hassas namaz vakti hesaplamaları
+
+### 🔔 **Akıllı Bildirim Sistemi**
+- Namaz vakti bildirimleri
+- Önceden hatırlatma seçenekleri
+- Ezan sesi ile bildirimler
+- Titreşim ayarları
+
+### 📱 **5 Farklı Widget Boyutu**
+- **1x1:** Kompakt widget
+- **2x1:** Orta boyut widget
+- **4x1:** Geniş widget
+- **3x2:** Detaylı widget
+- **4x2:** Tam boyut widget
+
+### 🎵 **Ezan Sesi Seçenekleri**
+- Geleneksel ezan
+- Modern ezan
+- Chime sesi
+- Ses seviyesi ayarı
+
+### 🎨 **Modern Tasarım**
+- Sade ve şık arayüz
+- Koyu/açık tema desteği
+- Renkli vakit göstergeleri
+- Saniyeli geri sayım
+
+## 🚀 **Teknoloji Stack**
+
+- **React Native 0.81**
+- **TypeScript**
+- **Redux Toolkit**
+- **Android Widgets (Kotlin)**
+- **iOS Widgets (Swift)**
+- **Push Notifications**
+- **Geolocation Services**
+
+## 📦 **Kurulum**
+
+### Android
+```bash
+npm install
+cd android
+./gradlew assembleRelease
+```
+
+### iOS (GitHub Actions)
+```bash
+npm install
+# GitHub Actions otomatik build alır
+```
+
+## 🔧 **Geliştirme**
+
+```bash
+# Bağımlılıkları yükle
+npm install
+
+# Android emülatörde çalıştır
+npm run android
+
+# iOS simülatörde çalıştır
+npm run ios
+
+# Metro bundler başlat
+npm start
+```
+
+## 📱 **Platform Desteği**
+
+- ✅ **Android 5.0+** (API 21+)
+- ✅ **iOS 12.0+**
+- ✅ **Android Widgets**
+- ✅ **iOS Widgets**
+- ✅ **Push Notifications**
+- ✅ **Background Services**
+
+## 🏪 **Mağaza Durumu**
+
+- 🔄 **Google Play Store:** Yayın sürecinde
+- 🔄 **Apple App Store:** GitHub Actions ile otomatik deploy
+
+## 🤖 **CI/CD**
+
+- ✅ **GitHub Actions:** iOS otomatik build
+- ✅ **Android:** Manuel build
+- ✅ **App Store Connect:** Otomatik upload
+
+## 👨‍💻 **Geliştirici**
+
+**Hasan Çağlar** - [@hasancaglar07](https://github.com/hasancaglar07)
+
+---
+
+🕌 **Mihmandar ile namaz vakitlerini kaçırmayın!** 🤲
 
 # Getting Started
 
